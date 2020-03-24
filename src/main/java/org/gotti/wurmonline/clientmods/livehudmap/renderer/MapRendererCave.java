@@ -4,98 +4,77 @@ import java.awt.Color;
 import java.awt.image.BufferedImage;
 
 import com.wurmonline.client.game.CaveDataBuffer;
-import com.wurmonline.client.renderer.PickData;
 import com.wurmonline.mesh.Tiles.Tile;
+import org.gotti.wurmonline.clientmods.livehudmap.LiveHudMapMod;
+import org.gotti.wurmonline.clientmods.livehudmap.LiveMap;
 
-public class MapRendererCave extends AbstractCaveRenderer {
-
-	public static boolean showHiddenOre;
-
+public final class MapRendererCave extends AbstractCaveRenderer {
+	
 	public MapRendererCave(CaveDataBuffer buffer) {
 		super(buffer);
 	}
-
+	
 	@Override
-	public BufferedImage createMapDump(int xo, int yo, int lWidth, int lHeight, int px, int py) {
-		if (yo < 0)
-			yo = 0;
-		if (xo < 0)
-			xo = 0;
-
-		final BufferedImage bi2 = new BufferedImage(lWidth, lWidth, BufferedImage.TYPE_INT_RGB);
-		final float[] data = new float[lWidth * lWidth * 3];
-
-		for (int x = 0; x < lWidth; x++) {
-			for (int y = lWidth - 1; y >= 0; y--) {
-
-				final short height = getHeight(x + xo, y + yo);
-				Tile tile = getEffectiveTileType(x + xo, y + yo);
-
-				final Color color;
-				if (tile != null) {
-					color = CaveColors.getColorFor(tile);
-				}
-				else {
-					color = CaveColors.getColorFor(Tile.TILE_CAVE);
-				}
+	public BufferedImage createMapDump(int leftX, int topY, int winWidth, int winHeight, int playerX, int playerY) {
+		if (topY < 0) topY = 0;
+		if (leftX < 0) leftX = 0;
+		
+		// Create a new image canvas
+		final BufferedImage bi2 = new BufferedImage(winWidth, winWidth, BufferedImage.TYPE_INT_RGB);
+		// Create an RGB map (Length x Width x 3[RGB])
+		final float[] data = new float[winWidth * winWidth * 3];
+		
+		// For X direction
+		for (int x = 0; x < winWidth; x++) {
+			// For Y direction
+			for (int y = winWidth - 1; y >= 0; y--) {
+				// If the player is on the tile
+				final boolean playerAt = LiveMap.SHOW_SELF && (playerX == (x + leftX)) && (playerY == (y + topY));
+				
+				// Get the tile height
+				final short height = this.getHeight(x + leftX, y + topY);
+				
+				// Get the tile type
+				Tile tile = this.getEffectiveTileType(x + leftX, y + topY);
+				
+				// Create the color for the tile
+				final Color color = ( playerAt ? Color.RED : CaveColors.getColorFor( tile == null ? Tile.TILE_CAVE : tile ));
+				
+				// Get the RGB of the color
 				int r = color.getRed();
 				int g = color.getGreen();
 				int b = color.getBlue();
-				if (height < 0 && tile == Tile.TILE_CAVE) {
+				
+				// Offset the color
+				if (!playerAt && height < 0 && tile == Tile.TILE_CAVE) {
 					r = (int) (r * 0.2f + 0.4f * 0.4f * 256f);
 					g = (int) (g * 0.2f + 0.5f * 0.4f * 256f);
 					b = (int) (b * 0.2f + 1.0f * 0.4f * 256f);
 				}
 				
-				if (px == x + xo && py == y + yo) {
-					r = Color.RED.getRed();
-					g = 0;
-					b = 0;
-				}
-
-				data[(x + y * lWidth) * 3 + 0] = r;
-				data[(x + y * lWidth) * 3 + 1] = g;
-				data[(x + y * lWidth) * 3 + 2] = b;
+				int pixelPos = (x + y * winWidth) * 3;
+				data[pixelPos + 0] = r;
+				data[pixelPos + 1] = g;
+				data[pixelPos + 2] = b;
 			}
 		}
-
-		bi2.getRaster().setPixels(0, 0, lWidth, lWidth, data);
+		
+		bi2.getRaster().setPixels(0, 0, winWidth, winWidth, data);
 		return bi2;
 	}
 	
-	private Tile getEffectiveTileType(int x, int y) {
-		Tile tile = getTileType(x, y);
-
-		if (!showHiddenOre && tile != Tile.TILE_CAVE_WALL && !isTunnel(tile) && isSurroundedByRock(x, y)) {
-			return Tile.TILE_CAVE_WALL;
-		}
-
-		return tile;
-	}
-
-	private boolean isTunnel(int x, int y) {
-		Tile tileType = getTileType(x, y);
-		return isTunnel(tileType);
-	}
-
-	private boolean isTunnel(Tile tileType) {
-		if (tileType == null) {
-			return false;
-		}
-		return tileType == Tile.TILE_CAVE || tileType == Tile.TILE_CAVE_EXIT || tileType.isReinforcedFloor() || tileType.isRoad();
-	}
-
-	private boolean isSurroundedByRock(int x, int y) {
-		return !isTunnel(x + 1, y) && !isTunnel(x - 1, y) && !isTunnel(x, y + 1) && !isTunnel(x, y - 1);
-	}
-
 	@Override
-	public void pick(PickData pickData, float xMouse, float yMouse, int width, int height, int px, int py) {
-		final int ox = px + (int)(xMouse * width) - width / 2;
-		final int oy = py + (int)(yMouse * height) - height / 2;
-		final Tile tile = getEffectiveTileType(ox, oy);
-		if (tile != Tile.TILE_CAVE_WALL && !isTunnel(tile)) {
-			pickData.addText(tile.getName().replace(" wall", "").replace(" vein", ""));
-		}
+	protected Tile getEffectiveTileType( int x, int y ) {
+		Tile tile = this.getTileType( x, y );
+		
+		// If tile is an ore
+		if ((!LiveMap.SHOW_ORES) && tile.isOreCave())
+			return Tile.TILE_CAVE_WALL;
+		
+		// If ore should be hidden if it is fully concealed
+		if (!LiveHudMapMod.SHOW_HIDDEN_ORE && tile != Tile.TILE_CAVE_WALL && !isTunnel( tile ) && isSurroundedByRock( x, y ))
+			return Tile.TILE_CAVE_WALL;
+		
+		return tile;
 	}
 }

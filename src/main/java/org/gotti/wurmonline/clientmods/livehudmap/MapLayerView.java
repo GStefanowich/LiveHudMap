@@ -10,16 +10,14 @@ import com.wurmonline.client.game.World;
 import com.wurmonline.client.renderer.PickData;
 import com.wurmonline.math.FastMath;
 
-public class MapLayerView {
+public final class MapLayerView {
 	
+	private World world;
 	private RenderType type;
-	
 	private MapRenderer renderer;
 	
 	private int zoom;
-
-	private World world;
-
+	
 	public MapLayerView(World world, RenderType renderType) {
 		this.world = world;
 		this.zoom = 1;
@@ -28,39 +26,40 @@ public class MapLayerView {
 	}
 	
 	public void zoomIn() {
-		if (type.getMapSize() / zoom > 4) {
-			zoom *= 2;
-		}
+		if (this.type.getMapSize() / this.zoom > 4) this.zoom *= 2;
+	}
+	public void zoomOut() {
+		if (this.zoom > 1) this.zoom /= 2;
+	}
+	public int getZoom() {
+		return this.zoom;
 	}
 	
-	public void zoomOut() {
-		if (zoom > 1) {
-			zoom /= 2;
-		}
+	public BufferedImage render(int playerX, int playerY) {
+		int area = this.type.getMapSize() / this.zoom;
+		return this.renderer.createMapDump(playerX - area / 2, playerY - area / 2, area, area, playerX, playerY);
 	}
-
-	public BufferedImage render(int px, int py) {
-		int sz = type.getMapSize() / zoom;
-		return renderer.createMapDump(px - sz / 2, py - sz / 2, sz, sz, px, py);
-	}
-
+	
 	public void setRenderer(RenderType renderType) {
-		if (renderType != type) {
-			type = renderType;
-			renderer = type.createMapRenderer(world);
-			if (type.getMapSize() / zoom < 4) {
-				zoom = FastMath.nearestPowerOfTwo(type.getMapSize() / 4);
+		if (renderType != this.type) {
+			this.type = renderType;
+			this.renderer = this.type.createMapRenderer( this.world );
+			if (this.type.getMapSize() / this.zoom < 4) {
+				this.zoom = FastMath.nearestPowerOfTwo(this.type.getMapSize() / 4);
 			}
-			if (zoom == 0) {
-				zoom = 1;
+			if (this.zoom == 0) {
+				this.zoom = 1;
 			}
 		}
+	}
+	public RenderType getRenderer() {
+		return this.type;
 	}
 	
 	public void pick(PickData pickData, float xMouse, float yMouse) {
 		final int sz = this.type.getMapSize() / this.zoom;
 		final PlayerPosition pos = this.world.getPlayer().getPos();
-		renderer.pick(pickData, xMouse, yMouse, sz, sz, pos.getTileX(), pos.getTileY());
+		this.renderer.pick(pickData, xMouse, yMouse, sz, sz, pos.getTileX(), pos.getTileY());
 	}
 	
 }

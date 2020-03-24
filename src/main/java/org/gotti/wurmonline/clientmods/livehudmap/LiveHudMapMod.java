@@ -1,17 +1,13 @@
 package org.gotti.wurmonline.clientmods.livehudmap;
 
-import java.lang.reflect.InvocationHandler;
-import java.lang.reflect.Method;
 import java.util.List;
 import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import org.gotti.wurmonline.clientmods.livehudmap.renderer.MapRendererCave;
-import org.gotti.wurmonline.clientmods.livehudmap.renderer.RenderType;
+import com.wurmonline.client.renderer.gui.WindowSerializer;
 import org.gotti.wurmunlimited.modloader.ReflectionUtil;
 import org.gotti.wurmunlimited.modloader.classhooks.HookManager;
-import org.gotti.wurmunlimited.modloader.classhooks.InvocationHandlerFactory;
 import org.gotti.wurmunlimited.modloader.interfaces.Configurable;
 import org.gotti.wurmunlimited.modloader.interfaces.Initable;
 import org.gotti.wurmunlimited.modloader.interfaces.PreInitable;
@@ -26,92 +22,90 @@ import com.wurmonline.client.renderer.gui.MainMenu;
 import com.wurmonline.client.renderer.gui.WurmComponent;
 import com.wurmonline.client.settings.SavePosManager;
 
-public class LiveHudMapMod implements WurmClientMod, Initable, PreInitable, Configurable, ConsoleListener {
+public class LiveHudMapMod implements WurmClientMod, Initable, Configurable, ConsoleListener {
 
-	private static Logger logger = Logger.getLogger(LiveHudMapMod.class.getName());
+	private static final Logger LOGGER = Logger.getLogger(LiveHudMapMod.class.getName());
 	
-	private boolean hiResMap = false;
-	private boolean showHiddenOre = false;
+	public static boolean USE_HIGH_RES_MAP = false;
+	public static boolean SHOW_HIDDEN_ORE = true;
 	
-	private Object liveMap;
+	public static int INT_VAL = 0;
+	
+	private Object liveMap = null;
 	
 	@Override
 	public void configure(Properties properties) {
-		hiResMap = Boolean.valueOf(properties.getProperty("hiResMap", String.valueOf(hiResMap)));
-		showHiddenOre = Boolean.valueOf(properties.getProperty("showHiddenOre", String.valueOf(showHiddenOre)));
+		USE_HIGH_RES_MAP = Boolean.parseBoolean(properties.getProperty("hiResMap", String.valueOf(USE_HIGH_RES_MAP)));
+		SHOW_HIDDEN_ORE = Boolean.parseBoolean(properties.getProperty("showHiddenOre", String.valueOf(SHOW_HIDDEN_ORE)));
 		
-		logger.log(Level.INFO, "hiResMap: " + hiResMap);
-		logger.log(Level.INFO, "showHiddenOre: " + showHiddenOre);
-
-		RenderType.highRes = hiResMap;
-		MapRendererCave.showHiddenOre = showHiddenOre;
+		LOGGER.log(Level.INFO, "hiResMap: " + USE_HIGH_RES_MAP);
+		LOGGER.log(Level.INFO, "showHiddenOre: " + SHOW_HIDDEN_ORE);
 	}
-
-	@Override
-	public void preInit() {
-	}
-
+	
 	@Override
 	public void init() {
-
 		// com.wurmonline.client.renderer.gui.HeadsUpDisplay.init(int, int)
 		HookManager.getInstance().registerHook("com.wurmonline.client.renderer.gui.HeadsUpDisplay", "init", "(II)V",
-				new InvocationHandlerFactory() {
-
-					@Override
-					public InvocationHandler createInvocationHandler() {
-						return new InvocationHandler() {
-
-							@Override
-							public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-								method.invoke(proxy, args);
-
-								initLiveMap((HeadsUpDisplay) proxy);
-
-								return null;
-							}
-						};
-					}
-				});
-
-		ModConsole.addConsoleListener(this);
-	}
-	
-	private void initLiveMap(HeadsUpDisplay hud) {
-		
-		new Runnable() {
-			
-			@Override
-			public void run() {
-				try {
-					World world = ReflectionUtil.getPrivateField(hud, ReflectionUtil.getField(hud.getClass(), "world"));
-		
-					LiveMapWindow liveMapWindow = new LiveMapWindow(world);
-					liveMap = liveMapWindow;
-		
-					MainMenu mainMenu = ReflectionUtil.getPrivateField(hud, ReflectionUtil.getField(hud.getClass(), "mainMenu"));
-					mainMenu.registerComponent("Live map", liveMapWindow);
-		
-					List<WurmComponent> components = ReflectionUtil.getPrivateField(hud, ReflectionUtil.getField(hud.getClass(), "components"));
-					components.add(liveMapWindow);
-					
-					SavePosManager savePosManager = ReflectionUtil.getPrivateField(hud, ReflectionUtil.getField(hud.getClass(), "savePosManager"));
-					savePosManager.registerAndRefresh(liveMapWindow, "livemapwindow");
-				}
-				catch (IllegalArgumentException | IllegalAccessException | ClassCastException | NoSuchFieldException e) {
-					throw new RuntimeException(e);
-				}
+			() -> (proxy, method, args) -> {
+				method.invoke(proxy, args);
+				
+				this.initLiveMap((HeadsUpDisplay) proxy);
+				
+				return null;
 			}
-		}.run();
+		);
+		
+		// Add the ConsoleListener to the console
+		ModConsole.addConsoleListener( this );
 	}
 	
+	/**
+	 * Initialize the livemap
+	 * @param hud The players HUD (Heads up Display)
+	 */
+	private void initLiveMap(final HeadsUpDisplay hud) {
+		// Sandbox the code into a runnable to prevent crashing of the main thread
+		((Runnable) () -> {
+			try {
+				World world = ReflectionUtil.getPrivateField(hud, ReflectionUtil.getField(hud.getClass(), "world"));
+				
+				this.liveMap = new LiveMapWindow( world );
+				
+				MainMenu mainMenu = ReflectionUtil.getPrivateField(hud, ReflectionUtil.getField(hud.getClass(), "mainMenu"));
+				mainMenu.registerComponent("Live map", (WurmComponent) this.liveMap);
+				
+				List<WurmComponent> components = ReflectionUtil.getPrivateField(hud, ReflectionUtil.getField(hud.getClass(), "components"));
+				components.add((WurmComponent) this.liveMap);
+				
+				SavePosManager savePosManager = ReflectionUtil.getPrivateField(hud, ReflectionUtil.getField(hud.getClass(), "savePosManager"));
+				savePosManager.registerAndRefresh((WindowSerializer) this.liveMap, "livemapwindow");
+			} catch (IllegalArgumentException | IllegalAccessException | ClassCastException | NoSuchFieldException e) {
+				throw new RuntimeException(e);
+			}
+		}).run();
+	}
+	
+	/**
+	 * On console input, if the user inputs "Toggle Livemap", toggle the live map.
+	 * @param string The console input
+	 * @param silent
+	 * @return If the command was a roaring success
+	 */
 	@Override
 	public boolean handleInput(String string, Boolean silent) {
-		if (string != null && string.startsWith("toggle livemap") && liveMap instanceof LiveMapWindow) {
-			((LiveMapWindow)liveMap).toggle();
-			return true;
+		if ( string != null ) {
+			boolean success;
+			if (success = (string.equalsIgnoreCase("toggle livemap") && this.liveMap instanceof LiveMapWindow))
+				((LiveMapWindow) this.liveMap).toggle();
+			
+			if (!success && string.startsWith("i ")){
+				INT_VAL = Integer.parseInt(string.substring( "i ".length() ));
+				success = true;
+			}
+			
+			return success;
 		}
 		return false;
 	}
-
+	
 }

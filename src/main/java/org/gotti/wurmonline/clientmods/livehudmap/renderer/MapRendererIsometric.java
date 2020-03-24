@@ -5,6 +5,7 @@ import java.awt.image.BufferedImage;
 
 import com.wurmonline.client.game.NearTerrainDataBuffer;
 import com.wurmonline.mesh.Tiles.Tile;
+import org.gotti.wurmonline.clientmods.livehudmap.LiveMap;
 
 public class MapRendererIsometric extends AbstractSurfaceRenderer {
 	
@@ -12,85 +13,85 @@ public class MapRendererIsometric extends AbstractSurfaceRenderer {
 		super(buffer);
 	}
 	
-    public BufferedImage createMapDump(int xo, int yo, int lWidth, int lHeight, int px, int py) {
-        if (yo < 0)
-            yo = 0;
-        if (xo < 0)
-            xo = 0;
-
-        final BufferedImage bi2 = new BufferedImage(lWidth, lHeight, BufferedImage.TYPE_INT_RGB);
-        final float[] data = new float[lWidth * lHeight * 3];
-                
-        int y0 = lHeight + lHeight / 2;
+    public BufferedImage createMapDump(int leftX, int topY, int winWidth, int winHeight, int playerX, int playerY) {
+        if (topY < 0) topY = 0;
+        if (leftX < 0) leftX = 0;
         
-        for (int x = 0; x < lWidth; x++) {
-            int alt = y0 - 1;
-            for (int y = y0 - 1; y >= -lHeight / 2 && alt >= 0; y--) {
-                float node = (float) (getSurfaceHeight(x + xo, y + yo) / (Short.MAX_VALUE / 3.3f));
-                float node2 = y == y0 - 1 ? node : (float) (getSurfaceHeight(x + 1 + xo, y + 1 + yo) / (Short.MAX_VALUE / 3.3f));
-
-
-                final float hh = node;
-
-                float h = ((node2 - node) * 1500) / 256.0f * 0x1000 / 128 + hh / 2 + 1.0f;
+        // Create a new image canvas
+        final BufferedImage bi2 = new BufferedImage(winWidth, winHeight, BufferedImage.TYPE_INT_RGB);
+        // Create an RGB map (Length x Width x 3[RGB])
+        final float[] data = new float[winWidth * winHeight * 3];
+        
+        int y0 = winHeight + winHeight / 2;
+        
+        // For X direction
+        for (int x = 0; x < winWidth; x++) {
+            int height = y0 - 1;
+            
+            // For Y direction
+            for (int y = y0 - 1; y >= -winHeight / 2 && height >= 0; y--) {
+                // If the player is on the tile
+                final boolean playerAt = LiveMap.SHOW_SELF && (playerX == (x + leftX)) && (playerY == (y + topY));
+    
+                // Get the tile height
+                float node = this.getSurfaceHeight(x + leftX, y + topY) / (Short.MAX_VALUE / 3.3f);
+                float node2 = y == y0 - 1 ? node : (this.getSurfaceHeight(x + 1 + leftX, y + 1 + topY) / (Short.MAX_VALUE / 3.3f));
+                
+                // Get the tile type
+                final Tile tile = this.getTileType(x + leftX, y + topY);
+                
+                float h = ((node2 - node) * 1500) / 256.0f * 0x1000 / 128 + node / 2 + 1.0f;
                 h *= 0.4f;
-
+                
+                // Set the color based on the height
                 float r = h;
                 float g = h;
                 float b = h;
-
-                final Tile tile = getTileType(x + xo, y + yo);
-                final Color color;
-                if (tile != null) {
-                    color = tile.getColor();
-                }
-                else {
-                    color = Tile.TILE_DIRT.getColor();
-                }
+                
+                // Get the color the tile should be
+                final Color color = ( playerAt ? Color.RED : TileColors.getColorFor( tile == null ? Tile.TILE_DIRT : tile ));
+                
+                // Adjust the color to the "normal" color
                 r *= (color.getRed() / 255.0f) * 2;
                 g *= (color.getGreen() / 255.0f) * 2;
                 b *= (color.getBlue() / 255.0f) * 2;
-
-                if (r < 0)
-                    r = 0;
-                if (r > 1)
-                    r = 1;
-                if (g < 0)
-                    g = 0;
-                if (g > 1)
-                    g = 1;
-                if (b < 0)
-                    b = 0;
-                if (b > 1)
-                    b = 1;
-
-                if (node < 0) {
-                    r = r * 0.2f + 0.4f * 0.4f;
-                    g = g * 0.2f + 0.5f * 0.4f;
-                    b = b * 0.2f + 1.0f * 0.4f;
-                }
-
-				if (px == x + xo && py == y + yo) {
-					r = 1.0f;
-					g = 0;
-					b = 0;
-				}
                 
-                final int altTarget = y - (int) (getSurfaceHeight(x + xo, y + yo) * MAP_HEIGHT / 4  / (Short.MAX_VALUE / 2.5f));
-                while (alt > altTarget && alt >= 0) {
-                	if (alt < lHeight) {
-	                    data[(x + alt * lWidth) * 3 + 0] = r * 255;
-	                    data[(x + alt * lWidth) * 3 + 1] = g * 255;
-	                    data[(x + alt * lWidth) * 3 + 2] = b * 255;
+                // Adjust values if the player is not standing there
+                if ( !playerAt ) {
+                    r = this.adjustScale( r );
+                    g = this.adjustScale( g );
+                    b = this.adjustScale( b );
+                    
+                    if (node < 0) {
+                        r = r * 0.2f + 0.4f * 0.4f;
+                        g = g * 0.2f + 0.5f * 0.4f;
+                        b = b * 0.2f + 1.0f * 0.4f;
+                    }
+                }
+                
+                final int altTarget = y - (int) (getSurfaceHeight(x + leftX, y + topY) * MapRenderer.MAP_HEIGHT / 4  / (Short.MAX_VALUE / 2.5f));
+                while (height > altTarget && height >= 0) {
+                	if (height < winHeight) {
+                        int pixelPos = (x + height * winWidth) * 3;
+	                    data[pixelPos + 0] = r * 255;
+	                    data[pixelPos + 1] = g * 255;
+	                    data[pixelPos + 2] = b * 255;
                 	}
-                    alt--;
+                    height--;
                 }
             }
         }
-
-        bi2.getRaster().setPixels(0, 0, lWidth, lHeight, data);
+        
+        bi2.getRaster().setPixels(0, 0, winWidth, winHeight, data);
         return bi2;
     }
 	
-
+    private float adjustScale(float val) {
+	    if (val > 1)
+	        return 1;
+	    if (val < 0)
+	        return 0;
+	    return val;
+    }
+    
 }

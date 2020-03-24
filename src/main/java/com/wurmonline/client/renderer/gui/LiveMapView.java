@@ -5,13 +5,12 @@ import org.gotti.wurmonline.clientmods.livehudmap.LiveMap;
 import com.wurmonline.client.renderer.backend.Queue;
 
 public class LiveMapView extends FlexComponent {
-
 	private final LiveMap liveMap;
-
+	
 	LiveMapView(String name, LiveMap liveMap, int width, int height) {
-		super(name);
-		setInitialSize(width, height, false);
-		sizeFlags = FlexComponent.FIXED_WIDTH | FlexComponent.FIXED_HEIGHT;
+		super( name );
+		this.setInitialSize( width, height, false );
+		this.sizeFlags = FlexComponent.FIXED_WIDTH | FlexComponent.FIXED_HEIGHT;
 		
 		this.liveMap = liveMap;
 	}
@@ -20,12 +19,14 @@ public class LiveMapView extends FlexComponent {
 	protected void renderComponent(Queue queue, float alpha) {
 		super.renderComponent(queue, alpha);
 		
-		liveMap.update(x, y);
-		liveMap.render(queue, 0.0F, 0.0F, 1.0F);
+		this.liveMap.update( this.x, this.y );
+		this.liveMap.render(queue, 1.0F);
 	}
 	
+	@Override
+	public void mouseWheeled(int mouseX, int mouseY, int delta) {
+		if (delta > 0) liveMap.zoomOut();
+		else liveMap.zoomIn();
+	}
 	
-	
-	
-
 }

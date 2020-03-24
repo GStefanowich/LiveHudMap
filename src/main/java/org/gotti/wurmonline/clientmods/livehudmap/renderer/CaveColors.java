@@ -1,17 +1,18 @@
 package org.gotti.wurmonline.clientmods.livehudmap.renderer;
 
 import com.wurmonline.mesh.Tiles.Tile;
+import org.gotti.wurmonline.clientmods.livehudmap.LiveMap;
+
 import java.awt.Color;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 public class CaveColors {
-    
-    private static final Map<Tile, Color> mappings = new HashMap<>();
+    private static final Map<Tile, Color> TILE_MAP = new HashMap<>();
     
     static {
-        addMapping(Tile.TILE_CAVE_WALL, Color.DARK_GRAY);
+        addMapping(Tile.TILE_CAVE_WALL, Color.DARK_GRAY.darker());
         addMapping(Tile.TILE_CAVE_WALL_REINFORCED, Color.DARK_GRAY);
         
         addMapping(Tile.TILE_CAVE_WALL_MARBLE_REINFORCED, Color.DARK_GRAY);
@@ -35,7 +36,7 @@ public class CaveColors {
         addMapping(Tile.TILE_CAVE_FLOOR_REINFORCED, Color.PINK);
         addMapping(Tile.TILE_CAVE_PREPATED_FLOOR_REINFORCED, Color.PINK);
         
-        addMapping(Tile.TILE_CAVE_EXIT, Color.PINK);
+        addMapping(Tile.TILE_CAVE_EXIT, Color.BLACK);
         addMapping(Tile.TILE_CAVE_WALL_ORE_IRON, Color.RED.darker());
         addMapping(Tile.TILE_CAVE_WALL_LAVA, Color.RED);
         addMapping(Tile.TILE_CAVE_WALL_ORE_COPPER, Color.GREEN);
@@ -53,14 +54,17 @@ public class CaveColors {
     }
     
     private static void addMapping(Tile tile, Color color) {
-        mappings.put(tile, color);
+        TILE_MAP.put(tile, color);
     }
     
     public static Color getColorFor(Tile tile) {
-        return mappings.getOrDefault(tile, Color.PINK);
+        Color color = TILE_MAP.getOrDefault(tile, Color.PINK);
+        if (tile.isRoad() && LiveMap.SHOW_ROADS)
+            return color.brighter();
+        return color;
     }
     
     protected static Map<Tile, Color> getMappings() {
-        return Collections.unmodifiableMap(mappings);
+        return Collections.unmodifiableMap(TILE_MAP);
     }
 }
