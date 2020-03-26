@@ -10,6 +10,7 @@ public class TileStructureData extends AbstractTileData<Coordinate> {
     
     private final String name;
     private final Coordinate pos;
+    private final float layer;
     private final StructureType type;
     private final Color color;
     
@@ -19,6 +20,7 @@ public class TileStructureData extends AbstractTileData<Coordinate> {
             data.getTileX(),
             data.getTileY()
         );
+        this.layer = data.getHPos();
         this.type = type;
         
         if (data instanceof BridgePartData)
@@ -30,10 +32,13 @@ public class TileStructureData extends AbstractTileData<Coordinate> {
     public String getName() {
         return this.name;
     }
-    
     @Override
     public Coordinate getPos() {
         return this.pos;
+    }
+    @Override
+    public float getHeight() {
+        return this.layer;
     }
     
     public boolean isBridge() {
@@ -42,7 +47,6 @@ public class TileStructureData extends AbstractTileData<Coordinate> {
     public boolean isBuilding() {
         return this.type == StructureType.HOUSE;
     }
-    
     
     @Override
     public Color getColor() {

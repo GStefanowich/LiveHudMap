@@ -5,12 +5,18 @@ import com.wurmonline.client.renderer.PickData;
 import com.wurmonline.client.renderer.gui.MapLayers;
 import com.wurmonline.mesh.Tiles.Tile;
 import org.gotti.wurmonline.clientmods.livehudmap.LiveMap;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.AbstractTileData;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.Coordinate;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.TileData;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.TileEntityData;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.TileStructureData;
 
 import java.awt.Color;
+import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
+import java.util.stream.Stream;
 
 public abstract class AbstractSurfaceRenderer extends MapRenderer<NearTerrainDataBuffer> {
 	public AbstractSurfaceRenderer( RenderType type, NearTerrainDataBuffer buffer ) {
@@ -63,5 +69,14 @@ public abstract class AbstractSurfaceRenderer extends MapRenderer<NearTerrainDat
 	@Override
 	protected Color tileColor(LiveMap map, Tile tile, Coordinate pos) {
 		return map.tileColor(tile, pos, TileColors::getColorFor );
+	}
+	
+	protected final <ListA extends AbstractTileData, ListB extends AbstractTileData> boolean colorEntityPriority(List<ListA> listA, List<ListB> listB) {
+		// If there are no entities, use the structure color
+		Optional<? extends AbstractTileData> higher = Stream.of( listA, listB )
+			.flatMap(Collection::stream)
+			.max(Comparator.comparingDouble(AbstractTileData::getHeight));
+		
+		return higher.isPresent() && (higher.get() instanceof TileEntityData);
 	}
 }

@@ -45,7 +45,6 @@ public enum Direction {
     
     public abstract Direction opposite();
     public static Direction fromRotation(float rotation) {
-        LiveHudMapMod.log("Direction is " + rotation);
         if (rotation < 45f)
             return Direction.SOUTH;
         if (rotation < 135)

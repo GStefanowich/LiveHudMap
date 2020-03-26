@@ -46,7 +46,7 @@ public class MapRendererFlat extends AbstractSurfaceRenderer {
 				final Tile tile = this.getTileType( pos );
 				
 				// Create the color for the tile
-				final Color color = ( entityAt.isEmpty() ? super.tileColor(map, tile, pos ) : map.entityColor(entityAt.get( 0 )));
+				final Color color = (this.colorEntityPriority( entityAt, structureAt ) ? map.entityColor(entityAt.get( 0 )) : super.tileColor(map, tile, pos ));
 				
 				// Get the RGB of the color
 				int r = color.getRed();

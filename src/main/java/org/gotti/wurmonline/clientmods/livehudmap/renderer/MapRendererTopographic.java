@@ -8,6 +8,7 @@ import com.wurmonline.client.game.NearTerrainDataBuffer;
 import com.wurmonline.mesh.Tiles.Tile;
 import org.gotti.wurmonline.clientmods.livehudmap.LiveMap;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.Coordinate;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.Direction;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.TileEntityData;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.TileStructureData;
 
@@ -53,13 +54,14 @@ public class MapRendererTopographic extends AbstractSurfaceRenderer {
 				boolean isContour = this.checkContourLine(height, nearHeightNX, this.interval)
 					|| this.checkContourLine(height, nearHeightNY, this.interval)
 					|| this.checkContourLine(height, nearHeightX, this.interval)
-					|| this.checkContourLine(height, nearHeightY, this.interval);
+					|| this.checkContourLine(height, nearHeightY, this.interval)
+					|| (entityAt.isEmpty() && this.isLargeAdjacent( map, pos ));
 				
 				// Get the tile type
 				final Tile tile = this.getTileType( pos );
 				
 				// Create the color for the tile
-				final Color color = ( entityAt.isEmpty() ? super.tileColor(map, tile, pos ) : map.entityColor(entityAt.get( 0 )));
+				final Color color = (this.colorEntityPriority( entityAt, structureAt ) ? map.entityColor(entityAt.get( 0 )) : super.tileColor(map, tile, pos ));
 				
 				// Get the RGB of the color
 				int r = color.getRed();
@@ -68,7 +70,7 @@ public class MapRendererTopographic extends AbstractSurfaceRenderer {
 				
 				// Change the terrain if the player isn't standing in the way
 				if (entityAt.isEmpty() && structureAt.isEmpty()) {
-					if (isContour) {
+					if ( isContour ) {
 						r = 0;
 						g = 0;
 						b = 0;
@@ -89,7 +91,17 @@ public class MapRendererTopographic extends AbstractSurfaceRenderer {
 		bi2.getRaster().setPixels(0, 0, imageX, imageX, data);
 		return bi2;
 	}
-
+	
+	private boolean isLargeAdjacent( LiveMap map, Coordinate center ) {
+		for (Direction direction : Direction.values()) {
+			List<TileEntityData> tile = map.getEntitiesAt( center.offset( direction ));
+			for (TileEntityData entity : tile) {
+				if (entity.getPos().size() > 1)
+					return true;
+			}
+		}
+		return false;
+	}
 	private boolean checkContourLine(short h0, short h1, short interval) {
 		if (h0 == h1) {
 			return false;
@@ -101,5 +113,5 @@ public class MapRendererTopographic extends AbstractSurfaceRenderer {
 		}
 		return false;
 	}
-
+	
 }

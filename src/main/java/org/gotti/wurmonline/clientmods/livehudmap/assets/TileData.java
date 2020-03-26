@@ -5,11 +5,11 @@ import java.util.Collections;
 import java.util.List;
 
 public class TileData {
-    
     private List<TileEntityData> players   = new ArrayList<>();
     private List<TileEntityData> vehicles  = new ArrayList<>();
     private List<TileEntityData> monsters  = new ArrayList<>();
     private List<TileEntityData> creatures = new ArrayList<>();
+    private List<TileEntityData> objects   = new ArrayList<>();
     
     private StructureType topStructure = StructureType.GROUND;
     private List<TileStructureData> bridges = new ArrayList<>();
@@ -25,7 +25,7 @@ public class TileData {
         else if (entity.isVehicle()) return this.vehicles.add(entity);
         else if (entity.isCreature()) return this.creatures.add(entity);
         else if (entity.isMonster()) return this.monsters.add(entity);
-        return false;
+        else return this.objects.add(entity);
     }
     public boolean addStructure(TileStructureData structure) {
         if (structure.isBridge()) return this.bridges.add(structure);
@@ -50,6 +50,9 @@ public class TileData {
     }
     public List<TileEntityData> getMonsters() {
         return this.monsters;
+    }
+    public List<TileEntityData> getObjects() {
+        return this.objects;
     }
     
     /*

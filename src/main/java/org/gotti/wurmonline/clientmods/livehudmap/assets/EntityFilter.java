@@ -4,5 +4,6 @@ public enum EntityFilter {
     PLAYER,
     VEHICLE,
     CREATURE,
-    HOSTILE
+    HOSTILE,
+    OBJECTS
 }

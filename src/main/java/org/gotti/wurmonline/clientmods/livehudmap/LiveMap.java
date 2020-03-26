@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
+import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -13,9 +14,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
+import com.wurmonline.client.comm.ServerConnectionListenerClass;
+import com.wurmonline.client.renderer.GroundItemData;
 import com.wurmonline.client.renderer.cell.CreatureCellRenderable;
-import com.wurmonline.client.renderer.gui.MapLayers;
-import com.wurmonline.client.renderer.gui.WurmComponent;
+import com.wurmonline.client.renderer.cell.GroundItemCellRenderable;
 import com.wurmonline.client.renderer.structures.BridgeData;
 import com.wurmonline.client.renderer.structures.StructureData;
 import com.wurmonline.mesh.Tiles.Tile;
@@ -27,6 +29,7 @@ import org.gotti.wurmonline.clientmods.livehudmap.assets.Sklotopolis;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.SklotopolisServer;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.TileData;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.TileStructureData;
+import org.gotti.wurmonline.clientmods.livehudmap.reflection.GroundItems;
 import org.gotti.wurmonline.clientmods.livehudmap.renderer.RenderType;
 import org.gotti.wurmunlimited.modloader.ReflectionUtil;
 
@@ -60,11 +63,10 @@ public class LiveMap implements TerrainChangeListener, CaveBufferChangeListener 
 	public static int REFRESH_RATE = ( LiveHudMapMod.USE_HIGH_RES_MAP ? 3 : 7 );
 	
 	private int dirtyTimer = 0;
-	private int updateTimer = 0;
 	private int size;
 	
 	private final World world;
-	private SklotopolisServer server;
+	private SklotopolisServer server = null;
 	
 	private MapLayer playerLayer = this.updateLayer();
 	
@@ -174,19 +176,14 @@ public class LiveMap implements TerrainChangeListener, CaveBufferChangeListener 
 		return this.playerPos;
 	}
 	
+	public void initializeServer() {
+		if (this.server != null)
+			this.server.initialize(this.world);
+	}
+	
 	// Get the current layer that the player is on
 	private MapLayerView getLayer() {
-		return this.getLayer( this.playerLayer );
-	}
-	private MapLayerView getLayer(MapLayer layer) {
-		return layer.getMap();
-		/*switch (layer) {
-			case SURFACE:
-				return MapLayers.SURFACE;
-			case CAVE:
-				return MapLayers.CAVE;
-		}
-		throw new IllegalArgumentException("Unknown layer: " + layer.name());*/
+		return this.playerLayer.getMap();
 	}
 	
 	// Apply rotation based on the way the player is facing
@@ -233,12 +230,12 @@ public class LiveMap implements TerrainChangeListener, CaveBufferChangeListener 
 	
 	// Change the renderer type
 	public void setRenderer(MapLayer layer, RenderType renderType) {
-		this.getLayer( layer )
+		layer.getMap()
 			.setRenderer(renderType);
 		this.markDirty();
 	}
 	public RenderType getRenderer() {
-		return this.getLayer( this.playerLayer )
+		return this.getLayer()
 			.getRenderer();
 	}
 	
@@ -331,6 +328,7 @@ public class LiveMap implements TerrainChangeListener, CaveBufferChangeListener 
 	public void updateEntities() {
 		// Get the creatures from the world
 		Map<Long, CreatureCellRenderable> creatures = this.getCreatures();
+		Map<Long, GroundItemCellRenderable> groundItems = this.getGroundItems();
 		Map<Long, StructureData> structures = this.getStructures();
 		MapLayerView layer = this.getLayer();
 		
@@ -350,6 +348,21 @@ public class LiveMap implements TerrainChangeListener, CaveBufferChangeListener 
 			
 			// Save the entity to the tile
 			layer.addToTile( entityData.getPos(), entityData );
+		}
+		
+		// Iterate through the worlds ground items
+		for (Map.Entry<Long, GroundItemCellRenderable> list : groundItems.entrySet()) {
+			EntityType type;
+			GroundItemCellRenderable groundItem = list.getValue();
+			GroundItemData groundItemData = GroundItems.getData( groundItem );
+			
+			if (groundItemData == null || ((type = EntityType.getByModelName(groundItemData.getModelName())) == null) || (this.playerLayer != MapLayer.getByElevation(groundItem.getLayer())))
+				continue;
+			
+			TileEntityData entityData = new TileEntityData(type, groundItemData);
+			
+			// Save the entity to the tile
+			layer.addToTile(entityData.getPos(), entityData);
 		}
 		
 		// Iterate structures
@@ -460,6 +473,7 @@ public class LiveMap implements TerrainChangeListener, CaveBufferChangeListener 
 			// Sift out the creatures from the tile
 			if (LiveMap.SHOW_CREATURES)
 				list.addAll(tile.getCreatures());
+			list.addAll(tile.getObjects());
 		}
 		
 		return list;
@@ -483,6 +497,20 @@ public class LiveMap implements TerrainChangeListener, CaveBufferChangeListener 
 			return Collections.emptyMap();
 		return this.world.getServerConnection()
 			.getServerConnectionListener().getCreatures();
+	}
+	private Map<Long, GroundItemCellRenderable> getGroundItems() {
+		ServerConnectionListenerClass listener = this.world.getServerConnection()
+			.getServerConnectionListener();
+		
+		try {
+			
+			Field field = ReflectionUtil.getField(ServerConnectionListenerClass.class, "groundItems");
+			return ReflectionUtil.getPrivateField(listener, field);
+			
+		} catch (IllegalAccessException | NoSuchFieldException e) {
+			LiveHudMapMod.log( e );
+			return Collections.emptyMap();
+		}
 	}
 	private Map<Long, StructureData> getStructures() {
 		if (this.world == null)

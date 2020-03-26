@@ -59,7 +59,7 @@ public class MapRendererIsometric extends AbstractSurfaceRenderer {
                 float b = h;
                 
                 // Get the color the tile should be
-                final Color color = ( entityAt.isEmpty() ? super.tileColor(map, tile, pos ) : map.entityColor(entityAt.get( 0 )));
+                final Color color = (this.colorEntityPriority( entityAt, structureAt ) ? map.entityColor(entityAt.get( 0 )) : super.tileColor(map, tile, pos ));
                 
                 // Adjust the color to the "normal" color
                 r *= (color.getRed() / 255.0f) * 2;

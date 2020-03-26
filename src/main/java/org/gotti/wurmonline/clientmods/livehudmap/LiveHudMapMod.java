@@ -105,9 +105,9 @@ public class LiveHudMapMod implements WurmClientMod, Initable, Configurable, Con
 			boolean success;
 			if (success = (string.equalsIgnoreCase("toggle livemap") && this.liveMap instanceof LiveMapWindow))
 				((LiveMapWindow) this.liveMap).toggle();
-			return success || silent;
+			return success;
 		}
-		return silent;
+		return false;
 	}
 	
 	public static void log( String log ) {

@@ -8,6 +8,8 @@ import java.awt.Color;
 public enum EntityType {
     // PLAYER
     PLAYER(EntityFilter.PLAYER, Color.RED),
+    TRADER(EntityFilter.CREATURE, Color.WHITE),
+    OBJECT(EntityFilter.OBJECTS, Color.WHITE),
     // VEHICLES
     WAGON(EntityFilter.VEHICLE, new Color( 150, 75, 0 )),
     CART(EntityFilter.VEHICLE, new Color( 150, 75, 0 )),
@@ -38,6 +40,7 @@ public enum EntityType {
     SPIRIT_GUARD(EntityFilter.CREATURE, Color.WHITE),
     TOWER_GUARD(EntityFilter.CREATURE, Color.WHITE),
     GUARD(EntityFilter.CREATURE, Color.WHITE),
+    GUARD_TOWER(EntityFilter.OBJECTS, Color.DARK_GRAY),
     HOLIDAY(EntityFilter.CREATURE, Color.GREEN);
     
     private final Color color;
@@ -62,8 +65,10 @@ public enum EntityType {
     }
     
     public static EntityType getByModelName(SecureStrings secure) {
-        String modelName = secure.toString();
-        switch ( modelName ) {
+        String model = secure.toString();
+        if (model.startsWith("model.furniture") || model.startsWith("model.decoration"))
+            return null;
+        switch ( model ) {
             case "model.creature.drake.black":
             case "model.creature.drake.green":
             case "model.creature.drake.white":
@@ -78,14 +83,8 @@ public enum EntityType {
                 return DRAGON;
             case "model.creature.humanoid.lavacreature":
             case "model.creature.multiped.spider.lava":
-            case "model.creature.quadraped.dog.hell":
             case "model.creature.multiped.scorpion.hell":
                 return HELL_MONSTER;
-            case "model.creature.quadraped.lamb":
-            case "model.creature.quadraped.sheep":
-                return SHEEP;
-            case "model.creature.quadraped.pig":
-                return PIG;
             case "model.creature.fish.dolphin":
             case "model.creature.fish.blue.whale":
             case "model.creature.fish.blue.octopus":
@@ -96,24 +95,41 @@ public enum EntityType {
                 return SEA_MONSTER;
             case "model.creature.quadraped.crab":
                 return CRAB;
-            case "model.creature.humanoid.chicken":
-            case "model.creature.humanoid.hen":
-            case "model.creature.humanoid.rooster":
-                return CHICKEN;
             case "model.creature.humanoid.human.guard":
                 return GUARD;
             default: {
-                if (modelName.startsWith("model.creature.quadraped.horse.hell"))
+                if (model.startsWith("model.container.spiritcastle") || model.startsWith("model.container.spiritmansion") || model.startsWith("model.decoration.altar") || model.startsWith("model.board.village") || model.startsWith("model.sign.messageboard")|| model.startsWith("model.sign.recruitment"))
+                    return OBJECT;
+                if (model.startsWith("model.structure.guardtower") || model.startsWith("model.structure.neutraltower"))
+                    return GUARD_TOWER;
+                if (model.startsWith("model.creature.quadraped.sheep") || model.startsWith("model.creature.quadraped.lamb"))
+                    return SHEEP;
+                if (model.startsWith("model.creature.quadraped.pig"))
+                    return PIG;
+                if (model.startsWith("model.creature.humanoid.hen") || model.startsWith("model.creature.humanoid.rooster") || model.startsWith("model.creature.humanoid.chicken"))
+                    return CHICKEN;
+                if (model.startsWith("model.creature.quadraped.bison"))
+                    return BISON;
+                if (model.startsWith("model.creature.humanoid.human.guard"))
+                    return GUARD;
+                if (model.startsWith("model.creature.humanoid.human.player"))
+                    return PLAYER;
+                if (model.startsWith("model.creature.humanoid.human.salesman"))
+                    return TRADER;
+                if (model.startsWith("model.creature.quadraped.horse.hell") || model.startsWith("model.creature.quadraped.dog.hell"))
                     return HELL_MONSTER;
-                if (modelName.startsWith("model.creature.quadraped.horse"))
+                if (model.startsWith("model.creature.quadraped.horse"))
                     return HORSE;
-                if (modelName.startsWith("model.transports.medium.wagon"))
+                if (model.startsWith("model.creature.quadraped.unicorn"))
+                    return UNICORN;
+                if (model.startsWith("model.transports.medium.wagon"))
                     return WAGON;
-                if (modelName.startsWith("model.structure.large.cart") || modelName.startsWith("model.structure.small.cart"))
+                if (model.startsWith("model.structure.large.cart") || model.startsWith("model.structure.small.cart") || model.startsWith("model.transports"))
                     return CART;
-                if (modelName.startsWith("model.structure.boat") || modelName.startsWith("model.structure.small.boat"))
+                if (model.startsWith("model.structure.boat") || model.startsWith("model.structure.small.boat"))
                     return SHIP;
             }
+            LiveHudMapMod.log( "Unknown map entity model: "+ model );
         }
         return null;
     }

@@ -30,7 +30,7 @@ public enum RenderType {
 		
 		@Override
 		public int getMapSize() {
-			if (LiveHudMapMod.USE_HIGH_RES_MAP) return 96;
+			if (LiveHudMapMod.USE_HIGH_RES_MAP) return 64;
 			return 32;
 		}
 	};

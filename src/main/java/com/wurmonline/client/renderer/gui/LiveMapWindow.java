@@ -12,6 +12,7 @@ import org.gotti.wurmonline.clientmods.livehudmap.LiveHudMapMod;
 import org.gotti.wurmonline.clientmods.livehudmap.LiveMap;
 import org.gotti.wurmonline.clientmods.livehudmap.MapLayer;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.Coordinate;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.Sklotopolis;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.SklotopolisServer;
 import org.gotti.wurmonline.clientmods.livehudmap.renderer.RenderType;
 import org.gotti.wurmunlimited.modloader.classhooks.HookManager;
@@ -183,18 +184,19 @@ public class LiveMapWindow extends WWindow {
 		}
 		
 		// Change options of the map
-		popup.addButton(SimpleButtonListener.livePopup( popup,SimpleButtonListener.toggleHidden(LiveMap.SHOW_SELF) + " Self", this.liveMap::toggleShowSelf));
-		popup.addButton(SimpleButtonListener.livePopup( popup,SimpleButtonListener.toggleHidden(LiveMap.SHOW_DEEDS) + " Deeds", this.liveMap::toggleShowDeeds));
-		popup.addButton(SimpleButtonListener.livePopup( popup,SimpleButtonListener.toggleHidden(LiveMap.SHOW_PLAYERS) + " Players", this.liveMap::toggleShowPlayers));
-		popup.addButton(SimpleButtonListener.livePopup( popup,SimpleButtonListener.toggleHidden(LiveMap.SHOW_CREATURES) + " Creatures", this.liveMap::toggleShowCreatures));
-		popup.addButton(SimpleButtonListener.livePopup( popup,SimpleButtonListener.toggleHidden(LiveMap.SHOW_HOSTILES) + " Hostiles", this.liveMap::toggleShowHostiles));
-		popup.addButton(SimpleButtonListener.livePopup( popup,SimpleButtonListener.toggleHidden(LiveMap.SHOW_VEHICLES) + " Vehicles", this.liveMap::toggleShowVehicles));
-		popup.addButton(SimpleButtonListener.livePopup( popup,SimpleButtonListener.toggleHidden(LiveMap.SHOW_ROADS) + " Roads", this.liveMap::toggleShowRoads));
-		popup.addButton(SimpleButtonListener.livePopup( popup,SimpleButtonListener.toggleHidden(LiveMap.SHOW_BUILDINGS) + " Buildings", this.liveMap::toggleShowBuildings));
-		popup.addButton(SimpleButtonListener.livePopup( popup,SimpleButtonListener.toggleHidden(LiveMap.SHOW_ORES) + " Ores", this.liveMap::toggleShowOres));
+		popup.addButton(SimpleButtonListener.livePopup(popup,SimpleButtonListener.toggleHidden(LiveMap.SHOW_SELF) + " Self", this.liveMap::toggleShowSelf));
+		popup.addButton(SimpleButtonListener.livePopup(popup,SimpleButtonListener.toggleHidden(LiveMap.SHOW_DEEDS) + " Deeds", this.liveMap::toggleShowDeeds));
+		popup.addButton(SimpleButtonListener.livePopup(popup,SimpleButtonListener.toggleHidden(LiveMap.SHOW_PLAYERS) + " Players", this.liveMap::toggleShowPlayers));
+		popup.addButton(SimpleButtonListener.livePopup(popup,SimpleButtonListener.toggleHidden(LiveMap.SHOW_CREATURES) + " Creatures", this.liveMap::toggleShowCreatures));
+		popup.addButton(SimpleButtonListener.livePopup(popup,SimpleButtonListener.toggleHidden(LiveMap.SHOW_HOSTILES) + " Hostiles", this.liveMap::toggleShowHostiles));
+		popup.addButton(SimpleButtonListener.livePopup(popup,SimpleButtonListener.toggleHidden(LiveMap.SHOW_VEHICLES) + " Vehicles", this.liveMap::toggleShowVehicles));
+		popup.addButton(SimpleButtonListener.livePopup(popup,SimpleButtonListener.toggleHidden(LiveMap.SHOW_ROADS) + " Roads", this.liveMap::toggleShowRoads));
+		popup.addButton(SimpleButtonListener.livePopup(popup,SimpleButtonListener.toggleHidden(LiveMap.SHOW_BUILDINGS) + " Buildings", this.liveMap::toggleShowBuildings));
+		popup.addButton(SimpleButtonListener.livePopup(popup,SimpleButtonListener.toggleHidden(LiveMap.SHOW_ORES) + " Ores", this.liveMap::toggleShowOres));
 		
 		popup.addSeparator();
-		popup.addButton(SimpleButtonListener.livePopup( popup, SimpleButtonListener.toggleEnable(LiveMap.ALWAYS_NORTH) + " True North", this.liveMap::toggleTrueNorth));
+		popup.addButton(SimpleButtonListener.livePopup(popup, SimpleButtonListener.toggleEnable(LiveMap.ALWAYS_NORTH) + " true north", this.liveMap::toggleTrueNorth));
+		popup.addButton(SimpleButtonListener.livePopup(popup, "Refresh deed info", this.liveMap::initializeServer));
 		
 		RenderType renderType = this.liveMap.getRenderer();
 		

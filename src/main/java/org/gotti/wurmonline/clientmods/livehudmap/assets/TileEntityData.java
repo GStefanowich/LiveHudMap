@@ -1,8 +1,9 @@
 package org.gotti.wurmonline.clientmods.livehudmap.assets;
 
 import com.wurmonline.client.game.PlayerObj;
-import com.wurmonline.client.renderer.CreatureData;
+import com.wurmonline.client.renderer.GroundItemData;
 import com.wurmonline.client.renderer.cell.CreatureCellRenderable;
+import com.wurmonline.client.renderer.cell.GroundItemCellRenderable;
 import com.wurmonline.client.renderer.cell.PlayerCellRenderable;
 
 import java.awt.Color;
@@ -14,17 +15,29 @@ public final class TileEntityData extends AbstractTileData<List<Coordinate>> {
     
     private final String name;
     private final List<Coordinate> pos;
+    private final float layer;
     private final EntityType type;
     
     public TileEntityData(EntityType type, CreatureCellRenderable creature) {
-        this.name = (creature instanceof PlayerCellRenderable ? creature.getCreatureData().getName() : creature.getHoverName());
-        this.pos  = TileEntityData.sizeUp(creature);
-        this.type = type;
+        this.name  = (creature instanceof PlayerCellRenderable ? creature.getCreatureData().getName() : creature.getHoverName());
+        this.pos   = TileEntityData.sizeUp(creature);
+        this.layer = creature.getHPos();
+        this.type  = type;
+    }
+    public TileEntityData(EntityType type, GroundItemData groundItem) {
+        this.name = groundItem.getName();
+        this.pos  = Collections.singletonList(Coordinate.of(
+            groundItem.getX() / 4,
+            groundItem.getY() / 4
+        ));
+        this.layer = groundItem.getH();
+        this.type  = type;
     }
     public TileEntityData(PlayerObj player) {
-        this.name = player.getPlayerName();
-        this.pos  = Collections.singletonList(Coordinate.of( player.getPos() ));
-        this.type = EntityType.PLAYER;
+        this.name  = player.getPlayerName();
+        this.pos   = Collections.singletonList(Coordinate.of( player.getPos() ));
+        this.layer = player.getPos().getH();
+        this.type  = EntityType.PLAYER;
     }
     
     @Override
@@ -34,6 +47,10 @@ public final class TileEntityData extends AbstractTileData<List<Coordinate>> {
     @Override
     public List<Coordinate> getPos() {
         return this.pos;
+    }
+    @Override
+    public float getHeight() {
+        return this.layer;
     }
     
     public boolean isPlayer() {
