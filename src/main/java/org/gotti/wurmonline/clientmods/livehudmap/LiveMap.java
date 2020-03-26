@@ -6,11 +6,27 @@ import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 
-import com.wurmonline.client.game.PlayerObj;
+import com.wurmonline.client.renderer.cell.CreatureCellRenderable;
+import com.wurmonline.client.renderer.gui.MapLayers;
+import com.wurmonline.client.renderer.gui.WurmComponent;
+import com.wurmonline.client.renderer.structures.BridgeData;
+import com.wurmonline.client.renderer.structures.StructureData;
+import com.wurmonline.mesh.Tiles.Tile;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.Coordinate;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.StructureType;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.TileEntityData;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.EntityType;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.Sklotopolis;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.SklotopolisServer;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.TileData;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.TileStructureData;
 import org.gotti.wurmonline.clientmods.livehudmap.renderer.RenderType;
 import org.gotti.wurmunlimited.modloader.ReflectionUtil;
 
@@ -34,19 +50,23 @@ public class LiveMap implements TerrainChangeListener, CaveBufferChangeListener 
 	public static boolean SHOW_SELF = true;
 	public static boolean SHOW_DEEDS = true;
 	public static boolean SHOW_PLAYERS = true;
+	public static boolean SHOW_CREATURES = true;
+	public static boolean SHOW_HOSTILES = true;
 	public static boolean SHOW_VEHICLES = true;
-	public static boolean SHOW_BUILDINGS = true;
-	public static boolean SHOW_ROADS = true;
+	public static boolean SHOW_BUILDINGS = false;
+	public static boolean SHOW_ROADS = false;
 	public static boolean SHOW_ORES = true;
 	
+	public static int REFRESH_RATE = ( LiveHudMapMod.USE_HIGH_RES_MAP ? 3 : 7 );
+	
+	private int dirtyTimer = 0;
+	private int updateTimer = 0;
 	private int size;
 	
 	private final World world;
 	private SklotopolisServer server;
 	
 	private MapLayer playerLayer = this.updateLayer();
-	private MapLayerView surface;
-	private MapLayerView cave;
 	
 	private boolean dirty = true;
 	private BufferedImage image;
@@ -56,7 +76,7 @@ public class LiveMap implements TerrainChangeListener, CaveBufferChangeListener 
 	private int windowX;
 	private int windowY;
 	
-	private int playerX = 0, playerY = 0;
+	private Coordinate playerPos = Coordinate.zero();
 	private float rotation = 0;
 	
 	public LiveMap(World world, int size) {
@@ -71,9 +91,6 @@ public class LiveMap implements TerrainChangeListener, CaveBufferChangeListener 
 		this.world.getNearTerrainBuffer().addListener(this);
 		this.world.getCaveBuffer().addCaveBufferListener(this);
 		
-		this.surface = new MapLayerView(world, RenderType.FLAT);
-		this.cave = new MapLayerView(world, RenderType.CAVE);
-		
 		this.onUpdate = callable;
 	}
 	
@@ -83,27 +100,39 @@ public class LiveMap implements TerrainChangeListener, CaveBufferChangeListener 
 		this.windowY = windowY;
 		
 		// Check the server the player is on
-		if (this.server == null)
+		if (this.server == null) {
+			// Get the server
 			this.server = Sklotopolis.getServerByName(this.world.getServerName());
+			
+			// Initialize the servers deeds
+			if (this.server != null) this.server.initialize( this.world );
+		}
 		
-		PlayerObj player = this.world.getPlayer();
-		PlayerPosition pos = player.getPos();
+		PlayerPosition pos = this.world.getPlayer().getPos();
+		Coordinate currentPosition = Coordinate.of(pos);
+		
 		float newRot = pos.getXRot(0);
 		
-		if ( !this.dirty && this.playerX != pos.getTileX() || this.playerY != pos.getTileY() || this.rotation != newRot )
-			this.dirty = true;
+		// Check if the map should be considered dirty
+		if ((!this.dirty && (!this.playerPos.equals( currentPosition )) || ( !ALWAYS_NORTH && this.rotation != newRot )) || ( this.dirtyTimer <= 0 ))
+			this.markDirty();
 		
-		if ( this.dirty ) {
+		// Update the layer
+		if (this.getLayer().tick())
+			this.updateEntities();
+		
+		if ( !this.dirty )
+			this.dirtyTimer--;
+		else {
 			// Check the players layer
 			this.playerLayer = this.updateLayer();
 			
 			// Get the players location
-			this.playerX = pos.getTileX();
-			this.playerY = pos.getTileY();
+			this.playerPos = currentPosition;
 			this.rotation = newRot;
 			
 			this.image = this.applyRotation(this.getLayer()
-				.render( this.playerX, this.playerY ), -this.rotation);
+				.render( this, this.playerPos ), -this.rotation);
 			
 			if (this.texture == null)
 				this.texture = ImageTextureLoader.loadNowrapNearestTexture(this.image, false);
@@ -127,11 +156,22 @@ public class LiveMap implements TerrainChangeListener, CaveBufferChangeListener 
 	}
 	private void update() {
 		if (this.onUpdate != null)
-			this.onUpdate.apply((this.server != null ? this.server.getName() + ": " : "") + this.windowX + ", " + this.windowY + " (" + this.getLayer().getZoom() + "x)");
+			this.onUpdate.apply((this.server != null ? this.server.getName() + ": " : "") + this.playerPos.getX() + ", " + this.playerPos.getY() + " (" + this.getLayer().getZoom() + "x)");
 		this.dirty = false;
 	}
 	private MapLayer updateLayer() {
-		return this.isSurface() ? MapLayer.SURFACE : MapLayer.CAVE;
+		return this.world == null ? MapLayer.SURFACE : MapLayer.getByElevation(this.world.getPlayerLayer());
+	}
+	
+	// Get the player information
+	public SklotopolisServer getServer() {
+		return this.server;
+	}
+	public World getWorld() {
+		return this.world;
+	}
+	public Coordinate getPlayerPos() {
+		return this.playerPos;
 	}
 	
 	// Get the current layer that the player is on
@@ -139,13 +179,14 @@ public class LiveMap implements TerrainChangeListener, CaveBufferChangeListener 
 		return this.getLayer( this.playerLayer );
 	}
 	private MapLayerView getLayer(MapLayer layer) {
-		switch (layer) {
+		return layer.getMap();
+		/*switch (layer) {
 			case SURFACE:
-				return surface;
+				return MapLayers.SURFACE;
 			case CAVE:
-				return cave;
+				return MapLayers.CAVE;
 		}
-		throw new IllegalArgumentException("Unknown layer: " + layer.name());
+		throw new IllegalArgumentException("Unknown layer: " + layer.name());*/
 	}
 	
 	// Apply rotation based on the way the player is facing
@@ -186,6 +227,7 @@ public class LiveMap implements TerrainChangeListener, CaveBufferChangeListener 
 	
 	// Set as dirty
 	public void markDirty() {
+		this.dirtyTimer = LiveMap.REFRESH_RATE;
 		this.dirty = true;
 	}
 	
@@ -229,6 +271,12 @@ public class LiveMap implements TerrainChangeListener, CaveBufferChangeListener 
 		SHOW_PLAYERS = !SHOW_PLAYERS;
 		this.markDirty();
 	}
+	public void toggleShowCreatures() {
+		SHOW_CREATURES = !SHOW_CREATURES;
+	}
+	public void toggleShowHostiles() {
+		SHOW_HOSTILES = !SHOW_HOSTILES;
+	}
 	public void toggleShowVehicles() {
 		SHOW_VEHICLES = !SHOW_VEHICLES;
 		this.markDirty();
@@ -246,12 +294,9 @@ public class LiveMap implements TerrainChangeListener, CaveBufferChangeListener 
 		this.markDirty();
 	}
 	
-	private boolean isSurface() {
-		if (this.world == null)
-			return true;
-		return this.world.getPlayerLayer() >= 0;
-	}
-	
+	/*
+	 * Rendering
+	 */
 	public void render(Queue queue, float textureScale) {
 		if (this.texture != null) {
 			Color transparency = Color.WHITE;
@@ -280,6 +325,61 @@ public class LiveMap implements TerrainChangeListener, CaveBufferChangeListener 
 		}
 	}
 	
+	/*
+	 * Map Data Caching
+	 */
+	public void updateEntities() {
+		// Get the creatures from the world
+		Map<Long, CreatureCellRenderable> creatures = this.getCreatures();
+		Map<Long, StructureData> structures = this.getStructures();
+		MapLayerView layer = this.getLayer();
+		
+		// Reset the tile data
+		layer.clearTiles();
+		
+		// Sift through the worlds creatures
+		for (Map.Entry<Long, CreatureCellRenderable> list : creatures.entrySet()) {
+			EntityType type;
+			CreatureCellRenderable creature = list.getValue();
+			
+			// Skip if the creature does not exist, is ignored, or is at a different plane
+			if (creature == null || ((type = EntityType.getByModelName(creature.getModelName())) == null) || (this.playerLayer != MapLayer.getByElevation(creature.getLayer())))
+				continue;
+			
+			TileEntityData entityData = new TileEntityData(type,creature);
+			
+			// Save the entity to the tile
+			layer.addToTile( entityData.getPos(), entityData );
+		}
+		
+		// Iterate structures
+		for (Map.Entry<Long, StructureData> list : structures.entrySet()) {
+			StructureType type;
+			StructureData structure = list.getValue();
+			
+			// Skip if the structure does not exist, or is ignored
+			if (structure == null || ((type = StructureType.getByClassName( structure )) == null))
+				continue;
+			final Collection<StructureData> structureParts;
+			
+			// Convert the data to a list
+			if (structure instanceof BridgeData)
+				structureParts = new ArrayList<>(((BridgeData)structure).getBridgeParts().values());
+			else structureParts = Collections.singleton( structure );
+			
+			// For each part of the structure
+			for (StructureData part : structureParts) {
+				TileStructureData structureData = new TileStructureData(type, structure.getHoverName(), part);
+				
+				// Save the structure to the tile
+				layer.addToTile(structureData.getPos(), structureData);
+			}
+		}
+	}
+	
+	/*
+	 * Automatic Game Listeners
+	 */
 	@Override
 	public void caveChanged(int paramInt1, int paramInt2, int paramInt3, int paramInt4, boolean paramBoolean) {
 		this.markDirty();
@@ -290,10 +390,106 @@ public class LiveMap implements TerrainChangeListener, CaveBufferChangeListener 
 		this.markDirty();
 	}
 	
-	public void pick(final PickData pickData, final float xMouse, final float yMouse) {
-		this.getLayer().pick(pickData, xMouse, yMouse);
+	/*
+	 * Map Colors
+	 */
+	public final Color tileColor(Tile tile, Coordinate pos, Function<Tile, Color> function) {
+		// Color deed borders
+		if (this.server != null && LiveMap.SHOW_DEEDS && this.server.isDeedBorder( pos ))
+			return ( this.getRenderer() == RenderType.CAVE ? Color.GRAY : Color.ORANGE );
+		
+		Color color = function.apply( tile == null ? Tile.TILE_DIRT : tile );
+		
+		if (this.server != null) {
+			// Color highways
+			if (LiveMap.SHOW_ROADS && this.server.isHighway( pos ))
+				return color.brighter();
+			
+			// Get information on the tile
+			TileData tileData = this.getLayer().getTile(pos);
+			if (tileData != null) {
+				StructureType top = tileData.topStructure();
+				if (top == StructureType.BRIDGE) {
+					// Color bridges
+					List<TileStructureData> bridges = tileData.getBridges();
+					if (!bridges.isEmpty())
+						return bridges.get(0).getColor();
+				} else if (top == StructureType.HOUSE) {
+					// Color houses
+					
+				}
+			}
+		}
+		
+		return color;
+	}
+	public final Color entityColor(TileEntityData entity) {
+		return entity.getColor();
 	}
 	
+	/*
+	 * Mouse Hinting
+	 */
+	public void tooltip(final PickData pickData, final float xMouse, final float yMouse) {
+		this.getLayer()
+			.tooltip(this, pickData, xMouse, yMouse);
+	}
+	public Coordinate mousePosToCoordinate(final float xMouse, final float yMouse) {
+		return this.getLayer().mousePosToCoordinate(xMouse, yMouse);
+	}
+	
+	/*
+	 * Get World Objects
+	 */
+	public final List<TileEntityData> getEntitiesAt(Coordinate worldPos) {
+		List<TileEntityData> list = new ArrayList<>();
+		TileData tile = this.getLayer().getTile( worldPos );
+		
+		if (LiveMap.SHOW_SELF && this.playerPos.equals( worldPos ))
+			list.add(new TileEntityData( this.world.getPlayer() ));
+		if (tile != null) {
+			// Sift out the players from the tile
+			if (LiveMap.SHOW_PLAYERS)
+				list.addAll(tile.getPlayers());
+			// Sift out the vehicles from the tile
+			if (LiveMap.SHOW_VEHICLES)
+				list.addAll(tile.getVehicles());
+			// Sift out the hostiles from the tile
+			if (LiveMap.SHOW_HOSTILES)
+				list.addAll(tile.getMonsters());
+			// Sift out the creatures from the tile
+			if (LiveMap.SHOW_CREATURES)
+				list.addAll(tile.getCreatures());
+		}
+		
+		return list;
+	}
+	public final List<TileStructureData> getStructuresAt(Coordinate worldPos) {
+		List<TileStructureData> list = new ArrayList<>();
+		TileData tile = this.getLayer().getTile( worldPos );
+		
+		if (tile != null) {
+			// Sift out the buildings from the tile
+			if (LiveMap.SHOW_BUILDINGS)
+				list.addAll(tile.getBuildings());
+			// Sift out the bridges from the tile
+			list.addAll(tile.getBridges());
+		}
+		
+		return list;
+	}
+	private Map<Long, CreatureCellRenderable> getCreatures() {
+		if (this.world == null)
+			return Collections.emptyMap();
+		return this.world.getServerConnection()
+			.getServerConnectionListener().getCreatures();
+	}
+	private Map<Long, StructureData> getStructures() {
+		if (this.world == null)
+			return Collections.emptyMap();
+		return this.world.getServerConnection()
+			.getServerConnectionListener().getStructures();
+	}
 	static {
 		try {
 			PROCESS_IMAGE_METHOD = ReflectionUtil.getMethod(TextureLoader.class, "preprocessImage", new Class[] { BufferedImage.class, boolean.class });

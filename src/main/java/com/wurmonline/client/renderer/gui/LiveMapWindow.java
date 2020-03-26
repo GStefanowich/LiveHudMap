@@ -4,13 +4,15 @@ import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.net.URL;
 import java.util.Locale;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import javax.imageio.ImageIO;
 
+import com.wurmonline.client.util.Computer;
+import org.gotti.wurmonline.clientmods.livehudmap.LiveHudMapMod;
 import org.gotti.wurmonline.clientmods.livehudmap.LiveMap;
 import org.gotti.wurmonline.clientmods.livehudmap.MapLayer;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.Coordinate;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.SklotopolisServer;
 import org.gotti.wurmonline.clientmods.livehudmap.renderer.RenderType;
 import org.gotti.wurmunlimited.modloader.classhooks.HookManager;
 
@@ -101,7 +103,7 @@ public class LiveMapWindow extends WWindow {
 				return null;
 			}
 		} catch (IOException e) {
-			Logger.getLogger(LiveMapWindow.class.getName()).log(Level.WARNING, e.getMessage(), e);
+			LiveHudMapMod.log( e );
 			return null;
 		}
 	}
@@ -118,24 +120,74 @@ public class LiveMapWindow extends WWindow {
 		}
 	}
 	
+	/**
+	 * When the left mouse button is dragged over the map
+	 * @param xMouse X mouse position
+	 * @param yMouse Y mouse position
+	 */
 	@Override
 	protected void mouseDragged(int xMouse, int yMouse) {
-		this.dragger.mouseDragged(xMouse, yMouse);
+		this.dragger.mouseDragged( xMouse, yMouse );
 	}
 	
+	/**
+	 * When the left mouse button is pressed down over the map
+	 * @param xMouse X mouse position
+	 * @param yMouse Y mouse position
+	 * @param clickCount Number of clicks on the map
+	 */
 	@Override
-	protected void rightPressed(int xMouse, int yMouse, int clickCount) {
-		WurmPopup popup = new WurmPopup("liveMapHugMenu", "Options", xMouse, yMouse);
+	protected void leftPressed(int xMouse, int yMouse, int clickCount) {
+		this.dragger.leftPressed( xMouse, yMouse, clickCount );
+	}
+	
+	/**
+	 * When the left mouse button is released over the map
+	 * @param xMouse X mouse position
+	 * @param yMouse Y mouse position
+	 */
+	@Override
+	protected void leftReleased(int xMouse, int yMouse) {
+		this.dragger.leftReleased( xMouse, yMouse );
+	}
+	
+	/**
+	 * @param xMouse X mouse position
+	 * @param yMouse Y mouse position
+	 * @param clickCount Number of clicks on the map
+	 */
+	@Override
+	protected void rightPressed(final int xMouse, final int yMouse, int clickCount) {
+		final SklotopolisServer server = this.liveMap.getServer();
+		
+		// Offset cursor and window to get tile pos
+		final Coordinate tile = this.mousePosToCoordinate( xMouse, yMouse );
+		
+		// Create a new popup at the mouse location
+		WurmPopup popup = new WurmPopup("liveMapHudMenu", "Options", xMouse, yMouse);
 		popup.addSeparator();
 		
 		// Add parent context options
 		this.dragger.addContextMenuEntry( popup );
+		popup.addButton(SimpleButtonListener.livePopup(popup, "Close window", this::closePressed));
 		popup.addSeparator();
+		
+		// Add URL opener
+		if (server != null) {
+			String mapURL = server.getMapURL( tile );
+			if (mapURL != null) {
+				popup.addButton(SimpleButtonListener.livePopup(popup, "Open in Browser", () -> Computer.openURL( mapURL )));
+				popup.addButton(SimpleButtonListener.livePopup(popup, "Copy location URL", () -> Computer.setClipboardContents( mapURL )));
+				popup.addSeparator();
+			}
+		}
 		
 		// Change options of the map
 		popup.addButton(SimpleButtonListener.livePopup( popup,SimpleButtonListener.toggleHidden(LiveMap.SHOW_SELF) + " Self", this.liveMap::toggleShowSelf));
 		popup.addButton(SimpleButtonListener.livePopup( popup,SimpleButtonListener.toggleHidden(LiveMap.SHOW_DEEDS) + " Deeds", this.liveMap::toggleShowDeeds));
 		popup.addButton(SimpleButtonListener.livePopup( popup,SimpleButtonListener.toggleHidden(LiveMap.SHOW_PLAYERS) + " Players", this.liveMap::toggleShowPlayers));
+		popup.addButton(SimpleButtonListener.livePopup( popup,SimpleButtonListener.toggleHidden(LiveMap.SHOW_CREATURES) + " Creatures", this.liveMap::toggleShowCreatures));
+		popup.addButton(SimpleButtonListener.livePopup( popup,SimpleButtonListener.toggleHidden(LiveMap.SHOW_HOSTILES) + " Hostiles", this.liveMap::toggleShowHostiles));
 		popup.addButton(SimpleButtonListener.livePopup( popup,SimpleButtonListener.toggleHidden(LiveMap.SHOW_VEHICLES) + " Vehicles", this.liveMap::toggleShowVehicles));
 		popup.addButton(SimpleButtonListener.livePopup( popup,SimpleButtonListener.toggleHidden(LiveMap.SHOW_ROADS) + " Roads", this.liveMap::toggleShowRoads));
 		popup.addButton(SimpleButtonListener.livePopup( popup,SimpleButtonListener.toggleHidden(LiveMap.SHOW_BUILDINGS) + " Buildings", this.liveMap::toggleShowBuildings));
@@ -171,10 +223,13 @@ public class LiveMapWindow extends WWindow {
 		WurmComponent.hud.toggleComponent( this );
 	}
 	
+	@Override
 	public void pick(final PickData pickData, final int xMouse, final int yMouse) {
 		if (this.liveMapView.contains(xMouse, yMouse)) {
-			this.liveMap.pick(pickData, 1.0f * (xMouse - this.liveMapView.x) / this.liveMapView.width, 1.0f * (yMouse - this.liveMapView.y) / this.liveMapView.width);
+			this.liveMap.tooltip(pickData, 1.0f * (xMouse - this.liveMapView.x) / this.liveMapView.width, 1.0f * (yMouse - this.liveMapView.y) / this.liveMapView.width);
 		}
 	}
-	
+	public Coordinate mousePosToCoordinate(final int xMouse, final int yMouse) {
+		return this.liveMap.mousePosToCoordinate(1.0f * (xMouse - this.liveMapView.x) / this.liveMapView.width, 1.0f * (yMouse - this.liveMapView.y) / this.liveMapView.width);
+	}
 }

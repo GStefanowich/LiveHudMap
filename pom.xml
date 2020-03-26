@@ -14,16 +14,19 @@
 			<groupId>org.gotti.wurmunlimited</groupId>
 			<artifactId>client-modlauncher</artifactId>
 			<version>0.10</version>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.gotti.wurmunlimited</groupId>
 			<artifactId>client</artifactId>
 			<version>3127451</version>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.gotti.wurmunlimited</groupId>
 			<artifactId>common-client</artifactId>
 			<version>3127451</version>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.lwjgl.lwjgl</groupId>
@@ -41,6 +44,12 @@
 			<artifactId>assertj-core</artifactId>
 			<version>3.11.1</version>
 			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.json</groupId>
+			<artifactId>json</artifactId>
+			<version>20190722</version>
+			<scope>compile</scope>
 		</dependency>
 		<dependency>
 			<groupId>com.google.guava</groupId>
@@ -121,6 +130,9 @@
 					<descriptors>
 						<descriptor>src/assembly/mod-package.xml</descriptor>
 					</descriptors>
+					<descriptorRefs>
+						<descriptorRef>jar-with-dependencies</descriptorRef>
+					</descriptorRefs>
 					<finalName>${project.name}-${project.version}</finalName>
 					<appendAssemblyId>false</appendAssemblyId>
 				</configuration>

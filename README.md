@@ -1,7 +1,5 @@
 # Live HUD Map for Wurm Unlimited
 
-Sponsored by [Razors Edge (Ages of Urath Saga)](http://forum.wurmonline.com/index.php?/topic/133419-razors-edge-ages-of-urath-saga/) Server
-
 ## Installation
 Requires [client modloader](https://github.com/ago1024/WurmClientModLauncher/releases/latest)
 
@@ -13,6 +11,5 @@ Requires [client modloader](https://github.com/ago1024/WurmClientModLauncher/rel
 
 ## Issues
 
-* The buttons are ugly as hell
 * The 3D view may scroll out of range when walking up a high mountain
 * Your dot may end up behind a mountain in 3D view

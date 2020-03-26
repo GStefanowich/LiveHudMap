@@ -2,75 +2,91 @@ package org.gotti.wurmonline.clientmods.livehudmap.renderer;
 
 import java.awt.Color;
 import java.awt.image.BufferedImage;
+import java.util.List;
 
 import com.wurmonline.client.game.NearTerrainDataBuffer;
 import com.wurmonline.mesh.Tiles.Tile;
+import org.gotti.wurmonline.clientmods.livehudmap.LiveMap;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.Coordinate;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.TileEntityData;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.TileStructureData;
 
 public class MapRendererTopographic extends AbstractSurfaceRenderer {
 	private short interval;
-
-	public MapRendererTopographic(NearTerrainDataBuffer buffer) {
-		super(buffer);
+	
+	public MapRendererTopographic( RenderType type, NearTerrainDataBuffer buffer ) {
+		super( type, buffer );
 		this.interval = 250;
 	}
-
+	
 	@Override
-	public BufferedImage createMapDump(int leftX, int topY, int winWidth, int winHeight, int playerX, int playerY) {
-		if (topY < 0)
-			topY = 0;
-		if (leftX < 0)
-			leftX = 0;
-
-		final BufferedImage bi2 = new BufferedImage(winWidth, winWidth, BufferedImage.TYPE_INT_RGB);
-		final float[] data = new float[winWidth * winWidth * 3];
-
-		for (int x = 0; x < winWidth; x++) {
-			for (int y = winWidth - 1; y >= 0; y--) {
-				final short height = getSurfaceHeight(x + leftX, y + topY);
-				final short nearHeightNX = x == 0 ? height : getSurfaceHeight(x + leftX - 1, y + topY);
-				final short nearHeightNY = y == 0 ? height : getSurfaceHeight(x + leftX, y + topY - 1);
-				final short nearHeightX = x == winWidth - 1 ? height : getSurfaceHeight(x + leftX + 1, y + topY);
-				final short nearHeightY = y == winWidth - 1 ? height : getSurfaceHeight(x + leftX, y + topY + 1);
-				boolean isControur = checkContourLine(height, nearHeightNX, interval)
-						|| checkContourLine(height, nearHeightNY, interval)
-						|| checkContourLine(height, nearHeightX, interval)
-						|| checkContourLine(height, nearHeightY, interval);
-
-				final Tile tile = getTileType(x + leftX, y + topY);
-				final Color color;
-				if (tile != null) {
-					color = tile.getColor();
-				}
-				else {
-					color = Tile.TILE_DIRT.getColor();
-				}
+	public BufferedImage createMapDump(LiveMap map, int leftX, int topY, int imageX, int imageY, Coordinate playerPos) {
+		if (topY < 0) topY = 0;
+		if (leftX < 0) leftX = 0;
+		
+		// Image should always be a square that covers both lengths
+		int imageDimension = Math.max(imageY, imageX);
+		
+		// Create a new image canvas
+		final BufferedImage bi2 = new BufferedImage(imageDimension, imageDimension, BufferedImage.TYPE_INT_RGB);
+		// Create an RGB map (Length x Width x 3[RGB])
+		final float[] data = new float[imageX * imageX * 3];
+		
+		// For X direction
+		for (int x = 0; x < imageX; x++) {
+			// For Y direction
+			for (int y = imageX - 1; y >= 0; y--) {
+				Coordinate pos = Coordinate.of( x + leftX, y + topY );
+				
+				// If the player is on the tile
+				List<TileEntityData> entityAt = map.getEntitiesAt( pos );
+				List<TileStructureData> structureAt = map.getStructuresAt( pos );
+				
+				// Get the tile height
+				final short height = getSurfaceHeight(pos );
+				
+				final short nearHeightNX = x == 0 ? height : getSurfaceHeight(pos.getX() - 1, pos.getY());
+				final short nearHeightNY = y == 0 ? height : getSurfaceHeight(pos.getX(), pos.getY() - 1);
+				final short nearHeightX = x == imageX - 1 ? height : getSurfaceHeight(pos.getX() + 1, pos.getY());
+				final short nearHeightY = y == imageX - 1 ? height : getSurfaceHeight(pos.getX(), pos.getY() + 1);
+				
+				boolean isContour = this.checkContourLine(height, nearHeightNX, this.interval)
+					|| this.checkContourLine(height, nearHeightNY, this.interval)
+					|| this.checkContourLine(height, nearHeightX, this.interval)
+					|| this.checkContourLine(height, nearHeightY, this.interval);
+				
+				// Get the tile type
+				final Tile tile = this.getTileType( pos );
+				
+				// Create the color for the tile
+				final Color color = ( entityAt.isEmpty() ? super.tileColor(map, tile, pos ) : map.entityColor(entityAt.get( 0 )));
+				
+				// Get the RGB of the color
 				int r = color.getRed();
 				int g = color.getGreen();
 				int b = color.getBlue();
-				if (isControur) {
-					r = 0;
-					g = 0;
-					b = 0;
+				
+				// Change the terrain if the player isn't standing in the way
+				if (entityAt.isEmpty() && structureAt.isEmpty()) {
+					if (isContour) {
+						r = 0;
+						g = 0;
+						b = 0;
+					} else if (height < 0) {
+						r = (int) (r * 0.2f + 0.4f * 0.4f * 256f);
+						g = (int) (g * 0.2f + 0.5f * 0.4f * 256f);
+						b = (int) (b * 0.2f + 1.0f * 0.4f * 256f);
+					}
 				}
-				else if (height < 0) {
-					r = (int) (r * 0.2f + 0.4f * 0.4f * 256f);
-					g = (int) (g * 0.2f + 0.5f * 0.4f * 256f);
-					b = (int) (b * 0.2f + 1.0f * 0.4f * 256f);
-				}
-
-				if (playerX == x + leftX && playerY == y + topY) {
-					r = Color.RED.getRed();
-					g = 0;
-					b = 0;
-				}
-
-				data[(x + y * winWidth) * 3 + 0] = r;
-				data[(x + y * winWidth) * 3 + 1] = g;
-				data[(x + y * winWidth) * 3 + 2] = b;
+				
+				int pixelPos = (x + y * imageX) * 3;
+				data[pixelPos + 0] = r;
+				data[pixelPos + 1] = g;
+				data[pixelPos + 2] = b;
 			}
 		}
-
-		bi2.getRaster().setPixels(0, 0, winWidth, winWidth, data);
+		
+		bi2.getRaster().setPixels(0, 0, imageX, imageX, data);
 		return bi2;
 	}
 

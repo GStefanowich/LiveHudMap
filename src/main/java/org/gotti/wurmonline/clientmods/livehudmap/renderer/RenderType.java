@@ -6,32 +6,31 @@ import org.gotti.wurmonline.clientmods.livehudmap.LiveHudMapMod;
 public enum RenderType {
 	FLAT {
 		@Override
-		public MapRenderer createMapRenderer(World world) {
-			return new MapRendererFlat(world.getNearTerrainBuffer());
+		public MapRenderer createMapRenderer( World world ) {
+			return new MapRendererFlat(this, world.getNearTerrainBuffer());
 		}
 	},
 	ISOMETRIC {
 		@Override
-		public MapRenderer createMapRenderer(World world) {
-			return new MapRendererIsometric(world.getNearTerrainBuffer());
+		public MapRenderer createMapRenderer( World world ) {
+			return new MapRendererIsometric(this, world.getNearTerrainBuffer());
 		}
 	},
 	TOPOGRAPHIC {
 		@Override
-		public MapRenderer createMapRenderer(World world) {
-			return new MapRendererTopographic(world.getNearTerrainBuffer());
+		public MapRenderer createMapRenderer( World world ) {
+			return new MapRendererTopographic(this, world.getNearTerrainBuffer());
 		}
 	},
 	CAVE {
 		@Override
 		public MapRenderer createMapRenderer(World world) {
-			return new MapRendererCave(world.getCaveBuffer());
+			return new MapRendererCave(this, world.getCaveBuffer());
 		}
 		
 		@Override
 		public int getMapSize() {
-			if (LiveHudMapMod.USE_HIGH_RES_MAP)
-				return 128;
+			if (LiveHudMapMod.USE_HIGH_RES_MAP) return 96;
 			return 32;
 		}
 	};

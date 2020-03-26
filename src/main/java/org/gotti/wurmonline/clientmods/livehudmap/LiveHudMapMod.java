@@ -5,7 +5,9 @@ import java.util.Properties;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.wurmonline.client.renderer.gui.HudSettings;
 import com.wurmonline.client.renderer.gui.WindowSerializer;
+import com.wurmonline.client.util.Computer;
 import org.gotti.wurmunlimited.modloader.ReflectionUtil;
 import org.gotti.wurmunlimited.modloader.classhooks.HookManager;
 import org.gotti.wurmunlimited.modloader.interfaces.Configurable;
@@ -23,13 +25,12 @@ import com.wurmonline.client.renderer.gui.WurmComponent;
 import com.wurmonline.client.settings.SavePosManager;
 
 public class LiveHudMapMod implements WurmClientMod, Initable, Configurable, ConsoleListener {
-
+	
+	private static HeadsUpDisplay HUD = null;
 	private static final Logger LOGGER = Logger.getLogger(LiveHudMapMod.class.getName());
 	
 	public static boolean USE_HIGH_RES_MAP = false;
 	public static boolean SHOW_HIDDEN_ORE = true;
-	
-	public static int INT_VAL = 0;
 	
 	private Object liveMap = null;
 	
@@ -38,8 +39,8 @@ public class LiveHudMapMod implements WurmClientMod, Initable, Configurable, Con
 		USE_HIGH_RES_MAP = Boolean.parseBoolean(properties.getProperty("hiResMap", String.valueOf(USE_HIGH_RES_MAP)));
 		SHOW_HIDDEN_ORE = Boolean.parseBoolean(properties.getProperty("showHiddenOre", String.valueOf(SHOW_HIDDEN_ORE)));
 		
-		LOGGER.log(Level.INFO, "hiResMap: " + USE_HIGH_RES_MAP);
-		LOGGER.log(Level.INFO, "showHiddenOre: " + SHOW_HIDDEN_ORE);
+		LOGGER.log(Level.ALL, "hiResMap: " + USE_HIGH_RES_MAP);
+		LOGGER.log(Level.ALL, "showHiddenOre: " + SHOW_HIDDEN_ORE);
 	}
 	
 	@Override
@@ -63,21 +64,28 @@ public class LiveHudMapMod implements WurmClientMod, Initable, Configurable, Con
 	 * Initialize the livemap
 	 * @param hud The players HUD (Heads up Display)
 	 */
-	private void initLiveMap(final HeadsUpDisplay hud) {
+	private void initLiveMap( final HeadsUpDisplay hud ) {
+		LiveHudMapMod.HUD = hud;
+		
 		// Sandbox the code into a runnable to prevent crashing of the main thread
 		((Runnable) () -> {
 			try {
-				World world = ReflectionUtil.getPrivateField(hud, ReflectionUtil.getField(hud.getClass(), "world"));
+				// Get the WORLD from the HUD
+				World world = ReflectionUtil.getPrivateField(LiveHudMapMod.HUD, ReflectionUtil.getField(LiveHudMapMod.HUD.getClass(), "world"));
 				
+				// Create the livemap window
 				this.liveMap = new LiveMapWindow( world );
 				
-				MainMenu mainMenu = ReflectionUtil.getPrivateField(hud, ReflectionUtil.getField(hud.getClass(), "mainMenu"));
+				// Create the button component to open/close the map
+				HudSettings mainMenu = ReflectionUtil.getPrivateField(LiveHudMapMod.HUD, ReflectionUtil.getField(LiveHudMapMod.HUD.getClass(), "hudSettings"));
 				mainMenu.registerComponent("Live map", (WurmComponent) this.liveMap);
 				
-				List<WurmComponent> components = ReflectionUtil.getPrivateField(hud, ReflectionUtil.getField(hud.getClass(), "components"));
+				// Register the component
+				List<WurmComponent> components = ReflectionUtil.getPrivateField(LiveHudMapMod.HUD, ReflectionUtil.getField(LiveHudMapMod.HUD.getClass(), "components"));
 				components.add((WurmComponent) this.liveMap);
 				
-				SavePosManager savePosManager = ReflectionUtil.getPrivateField(hud, ReflectionUtil.getField(hud.getClass(), "savePosManager"));
+				// Create the position manager to maintain the location of the livemap
+				SavePosManager savePosManager = ReflectionUtil.getPrivateField(LiveHudMapMod.HUD, ReflectionUtil.getField(LiveHudMapMod.HUD.getClass(), "savePosManager"));
 				savePosManager.registerAndRefresh((WindowSerializer) this.liveMap, "livemapwindow");
 			} catch (IllegalArgumentException | IllegalAccessException | ClassCastException | NoSuchFieldException e) {
 				throw new RuntimeException(e);
@@ -88,24 +96,25 @@ public class LiveHudMapMod implements WurmClientMod, Initable, Configurable, Con
 	/**
 	 * On console input, if the user inputs "Toggle Livemap", toggle the live map.
 	 * @param string The console input
-	 * @param silent
+	 * @param silent If the output should be silent
 	 * @return If the command was a roaring success
 	 */
 	@Override
-	public boolean handleInput(String string, Boolean silent) {
+	public boolean handleInput( String string, Boolean silent ) {
 		if ( string != null ) {
 			boolean success;
 			if (success = (string.equalsIgnoreCase("toggle livemap") && this.liveMap instanceof LiveMapWindow))
 				((LiveMapWindow) this.liveMap).toggle();
-			
-			if (!success && string.startsWith("i ")){
-				INT_VAL = Integer.parseInt(string.substring( "i ".length() ));
-				success = true;
-			}
-			
-			return success;
+			return success || silent;
 		}
-		return false;
+		return silent;
+	}
+	
+	public static void log( String log ) {
+		if (HUD != null) HUD.consoleOutput( log );
+	}
+	public static void log( Throwable e ) {
+		LOGGER.log( Level.WARNING, e.getMessage(), e );
 	}
 	
 }
