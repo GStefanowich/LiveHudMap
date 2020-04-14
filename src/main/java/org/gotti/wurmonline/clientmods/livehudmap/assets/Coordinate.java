@@ -123,6 +123,19 @@ public final class Coordinate {
         );
     }
     
+    public Coordinate multiply(int by) {
+        return Coordinate.of(
+            this.getX() * by,
+            this.getY() * by
+        );
+    }
+    public Coordinate divide(int by) {
+        return Coordinate.of(
+            this.getX() / by,
+            this.getY() / by
+        );
+    }
+    
     /*
      * Maths to add or subtract distance based on directions
      */

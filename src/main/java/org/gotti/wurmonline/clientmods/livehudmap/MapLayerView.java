@@ -72,8 +72,11 @@ public final class MapLayerView {
 		);
 	}
 	public Coordinate mousePosToCoordinate(final LiveMap map, final float xMouse, final float yMouse) {
+		return this.mousePosToCoordinate(map.getCurrentMapCenter(), xMouse, yMouse);
+	}
+	public Coordinate mousePosToCoordinate(final Coordinate center, final float xMouse, final float yMouse) {
 		final int size = this.type.getMapSize() / this.zoom;
-		final Coordinate center = map.getCurrentMapCenter();
+		
 		// Offset cursor and window to get tile pos
 		return Coordinate.of(
 			center.getX() + (int)(xMouse * size) - size / 2,

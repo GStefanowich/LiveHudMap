@@ -512,6 +512,10 @@ public class LiveMap implements TerrainChangeListener, CaveBufferChangeListener 
 		return this.getLayer()
 			.mousePosToCoordinate(this,xMouse, yMouse);
 	}
+	public Coordinate mousePosToCoordinate(Coordinate mapCenter, final float xMouse, final float yMouse) {
+		return this.getLayer()
+			.mousePosToCoordinate(mapCenter, xMouse, yMouse);
+	}
 	
 	/*
 	 * Get World Objects

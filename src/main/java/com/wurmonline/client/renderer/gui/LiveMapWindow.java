@@ -31,6 +31,7 @@ public class LiveMapWindow extends WWindow {
 	private final LiveMapView liveMapView;
 	private final WurmTextPanel playerPosition;
 	
+	private Coordinate dragCenter = null;
 	private Coordinate dragAt = null;
 	private int dragX = 0, dragY = 0;
 	
@@ -134,9 +135,12 @@ public class LiveMapWindow extends WWindow {
 	@Override
 	protected void mouseDragged(int xMouse, int yMouse) {
 		if (this.dragger.isDisabled()) {
-			if (this.dragAt != null) {
-				Coordinate diff = this.mousePosToCoordinate(xMouse, yMouse);
-				this.liveMap.setCenter(this.dragAt.add( diff ));
+			if (this.dragAt != null && this.dragCenter != null) {
+				// Move the map when dragged
+				this.liveMap.setCenter(this.dragCenter.sub(
+					this.mousePosToCoordinate(this.dragCenter,xMouse, yMouse)
+						.sub(this.dragAt)
+				));
 			}
 		} else this.dragger.mouseDragged( xMouse, yMouse );
 	}
@@ -150,12 +154,12 @@ public class LiveMapWindow extends WWindow {
 	@Override
 	protected void leftPressed(int xMouse, int yMouse, int clickCount) {
 		if (this.dragger.isDisabled()) {
-			LiveHudMapMod.log("Mouse click count: " + clickCount);
 			if (clickCount > 1) {
 				this.liveMap.setCenter(this.mousePosToCoordinate(xMouse, yMouse));
 				this.liveMap.zoomIn();
 			} else {
 				this.dragAt = this.mousePosToCoordinate(xMouse, yMouse);
+				this.dragCenter = this.liveMap.getCurrentMapCenter();
 				this.dragX = xMouse;
 				this.dragY = yMouse;
 			}
@@ -171,6 +175,7 @@ public class LiveMapWindow extends WWindow {
 	protected void leftReleased(int xMouse, int yMouse) {
 		if (this.dragger.isDisabled()) {
 			this.dragAt = null;
+			this.dragCenter = null;
 		} else this.dragger.leftReleased( xMouse, yMouse );
 	}
 	
@@ -259,5 +264,8 @@ public class LiveMapWindow extends WWindow {
 	}
 	public Coordinate mousePosToCoordinate(final int xMouse, final int yMouse) {
 		return this.liveMap.mousePosToCoordinate(1.0f * (xMouse - this.liveMapView.x) / this.liveMapView.width, 1.0f * (yMouse - this.liveMapView.y) / this.liveMapView.width);
+	}
+	public Coordinate mousePosToCoordinate(Coordinate mapCenter, final int xMouse, final int yMouse) {
+		return this.liveMap.mousePosToCoordinate(mapCenter, 1.0f * (xMouse - this.liveMapView.x) / this.liveMapView.width, 1.0f * (yMouse - this.liveMapView.y) / this.liveMapView.width);
 	}
 }
