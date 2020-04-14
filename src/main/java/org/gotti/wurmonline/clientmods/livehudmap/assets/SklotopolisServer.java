@@ -1,3 +1,28 @@
+/*
+ * This software is licensed under the MIT License
+ * https://github.com/GStefanowich/LiveHudMap
+ *
+ * Copyright (c) 2019 Gregory Stefanowich
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package org.gotti.wurmonline.clientmods.livehudmap.assets;
 
 import com.wurmonline.client.game.World;
@@ -18,11 +43,13 @@ public class SklotopolisServer {
     private World world = null;
     
     private final String serverName;
+    private final Map<Coordinate, TileDeedData> deedBorders;
     private final Map<Coordinate, SklotopolisDeed> serverDeeds;
     
     public SklotopolisServer(String name) {
         this.serverName = name;
         this.serverDeeds = new ConcurrentHashMap<>();
+        this.deedBorders = new ConcurrentHashMap<>();
     }
     
     /*
@@ -72,16 +99,22 @@ public class SklotopolisServer {
                 
                 LiveHudMapMod.log("Updated " + this.serverDeeds.size() + " deeds for " + this.getName());
             } catch (IOException | JSONException e) {
-                LiveHudMapMod.log( e );
+                LiveHudMapMod.log(e);
             }
         }).start();
     }
     private void addDeed(SklotopolisDeed deed) {
-        Coordinate nw = deed.getNorthWest();
-        Coordinate se = deed.getSouthEast();
-        for (int x = nw.getX(); x < se.getX(); x++) {
-            for (int y = nw.getY(); y < se.getY(); y++) {
-                this.serverDeeds.put(Coordinate.of( x, y ), deed);
+        Coordinate nw = deed.getPerimeterNorthWest();
+        Coordinate se = deed.getPerimeterSouthEast();
+        for (int x = nw.getX(); x <= se.getX(); x++) {
+            for (int y = nw.getY(); y <= se.getY(); y++) {
+                Coordinate c = Coordinate.of( x, y );
+                
+                this.serverDeeds.put(c, deed);
+                
+                TileDeedData tileData = deed.getTileData( c );
+                if ( tileData != null )
+                    this.deedBorders.put(c, tileData);
             }
         }
     }
@@ -90,12 +123,7 @@ public class SklotopolisServer {
      * Check for deeds
      */
     public boolean isDeedBorder(Coordinate pos) {
-        int sides = 0;
-        if (this.isDeeded(pos.offset(Direction.NORTH))) sides++;
-        if (this.isDeeded(pos.offset(Direction.EAST))) sides++;
-        if (this.isDeeded(pos.offset(Direction.SOUTH))) sides++;
-        if (this.isDeeded(pos.offset(Direction.WEST))) sides++;
-        return sides == 1;
+        return this.getDeedBorder(pos).isPresent();
     }
     public boolean isDeeded(Coordinate pos) {
         return this.getDeed(pos).isPresent();
@@ -105,14 +133,12 @@ public class SklotopolisServer {
         SklotopolisDeed found = null;
         if (LiveMap.SHOW_DEEDS)
             found = this.serverDeeds.get( position );
-        /*if (LiveMap.SHOW_DEEDS) {
-            for (SklotopolisDeed deed : this.serverDeeds.values()) {
-                if (deed.getDeedEdge().isWithin(position)) {
-                    found = deed;
-                    break;
-                }
-            }
-        }*/
+        return Optional.ofNullable( found );
+    }
+    public Optional<TileDeedData> getDeedBorder(Coordinate position) {
+        TileDeedData found = null;
+        if (LiveMap.SHOW_DEEDS)
+            found = this.deedBorders.get( position );
         return Optional.ofNullable( found );
     }
     

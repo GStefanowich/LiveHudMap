@@ -7,16 +7,17 @@ import java.util.HashMap;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.AbstractTileData;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.Coordinate;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.TileData;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.TileEntityData;
 import org.gotti.wurmonline.clientmods.livehudmap.renderer.MapRenderer;
 import org.gotti.wurmonline.clientmods.livehudmap.renderer.RenderType;
 
-import com.wurmonline.client.game.PlayerPosition;
 import com.wurmonline.client.game.World;
 import com.wurmonline.client.renderer.PickData;
 import com.wurmonline.math.FastMath;
 
 public final class MapLayerView {
-	private HashMap<Coordinate, TileData> tileData = new HashMap<>();
+	private final HashMap<Coordinate, TileData> structureLayer = new HashMap<>();
+	private final HashMap<Coordinate, TileData> entityLayer = new HashMap<>();
 	private World world;
 	private RenderType type;
 	private MapRenderer renderer;
@@ -62,53 +63,68 @@ public final class MapLayerView {
 		return this.type;
 	}
 	
-	public void tooltip(LiveMap map, PickData pickData, float xMouse, float yMouse) {
-		final int size = this.type.getMapSize() / this.zoom;
-		final Coordinate player = Coordinate.of(this.world.getPlayer().getPos());
+	public void tooltip(final LiveMap map, final PickData pickData, float xMouse, float yMouse) {
 		this.renderer.tooltip(
 			map,
 			pickData,
-			Coordinate.of(
-				player.getX() + (int)(xMouse * size) - size / 2,
-				player.getY() + (int)(yMouse * size) - size / 2
-			),
-			player
+			this.mousePosToCoordinate(map, xMouse, yMouse),
+			map.getPlayerPosition()
 		);
 	}
-	public Coordinate mousePosToCoordinate(final float xMouse, final float yMouse) {
-		final int sz = this.type.getMapSize() / this.zoom;
-		final PlayerPosition pos = this.world.getPlayer().getPos();
+	public Coordinate mousePosToCoordinate(final LiveMap map, final float xMouse, final float yMouse) {
+		final int size = this.type.getMapSize() / this.zoom;
+		final Coordinate center = map.getCurrentMapCenter();
 		// Offset cursor and window to get tile pos
 		return Coordinate.of(
-			pos.getTileX() + (int)(xMouse * sz) - sz / 2,
-			pos.getTileY() + (int)(yMouse * sz) - sz / 2
+			center.getX() + (int)(xMouse * size) - size / 2,
+			center.getY() + (int)(yMouse * size) - size / 2
 		);
 	}
 	
-	public void clearTiles() {
-		this.tileData.clear();
+	public void clearEntities() {
+		this.entityLayer.clear();
 	}
-	public TileData getTile(Coordinate pos) {
+	public TileData getStructureLayer(Coordinate pos) {
 		boolean contains;
 		
-		TileData tile = this.tileData.get( pos );
+		TileData tile = this.structureLayer.get( pos );
 		
 		// Create a new Tile Data if it is not in the map
 		if (!(contains = tile != null))
-			tile = new TileData();
+			tile = new TileData( pos );
 		
 		// Save the tile if it does not exist
 		if (!contains)
-			this.setTile( pos, tile );
+			this.setStructureLayer( pos, tile );
 		
 		return tile;
 	}
-	public TileData setTile(Coordinate pos, TileData tile) {
-		return this.tileData.put( pos, tile );
+	private TileData setStructureLayer(Coordinate pos, TileData tile) {
+		return this.structureLayer.put( pos, tile );
+	}
+	
+	public TileData getEntityLayer(Coordinate pos) {
+		boolean contains;
+		
+		TileData tile = this.entityLayer.get( pos );
+		
+		// Create a new Tile Data if it is not in the map
+		if (!(contains = tile != null))
+			tile = new TileData( pos );
+		
+		// Save the tile if it does not exist
+		if (!contains)
+			this.setEntityLayer( pos, tile );
+		
+		return tile;
+	}
+	private TileData setEntityLayer(Coordinate pos, TileData tile) {
+		return this.entityLayer.put(pos, tile);
 	}
 	
 	public boolean addToTile(Coordinate pos, AbstractTileData data) {
-		return this.getTile(pos).add( data );
+		if (data instanceof TileEntityData) return this.getEntityLayer(pos).add( data );
+		return this.getStructureLayer(pos).add( data );
 	}
 	public void addToTile(Collection<Coordinate> positions, AbstractTileData data) {
 		for (Coordinate pos : positions)

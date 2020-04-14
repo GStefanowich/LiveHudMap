@@ -25,10 +25,41 @@
 
 package org.gotti.wurmonline.clientmods.livehudmap.assets;
 
-public enum EntityFilter {
-    PLAYER,
-    VEHICLE,
-    CREATURE,
-    HOSTILE,
-    OBJECTS
+import java.awt.Color;
+
+public class TileDeedData extends AbstractTileData<Coordinate> {
+    private final Coordinate pos;
+    private final boolean isBorder;
+    private final String deedName;
+    
+    public TileDeedData(String deedName, Coordinate pos, boolean border) {
+        this.pos = pos;
+        this.isBorder = border;
+        this.deedName = deedName + ( isBorder ? " Border" : "" );
+    }
+    
+    @Override
+    public String getName() {
+        return this.deedName;
+    }
+    
+    @Override
+    public Coordinate getPos() {
+        return this.pos;
+    }
+    
+    @Override
+    public float getHeight() {
+        return -1;
+    }
+    
+    @Override
+    public Color getColor() {
+        return this.isBorder ? new Color(139,0,0) : new Color(124,252,0);
+    }
+    
+    @Override
+    public AbstractTileType getType() {
+        return AbstractTileType.DEED;
+    }
 }

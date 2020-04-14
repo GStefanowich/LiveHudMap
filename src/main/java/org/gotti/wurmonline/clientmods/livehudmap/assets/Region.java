@@ -25,60 +25,54 @@
 
 package org.gotti.wurmonline.clientmods.livehudmap.assets;
 
-public enum Direction {
-    NORTH( 0, -1 ) {
-        @Override
-        public Direction opposite() {
-            return SOUTH;
-        }
-    },
-    EAST( 1, 0 ) {
-        @Override
-        public Direction opposite() {
-            return WEST;
-        }
-    },
-    SOUTH( 0, 1 ) {
-        @Override
-        public Direction opposite() {
-            return NORTH;
-        }
-    },
-    WEST( -1 , 0 ) {
-        @Override
-        public Direction opposite() {
-            return EAST;
-        }
-    };
+import java.util.Objects;
+
+/**
+ *
+ */
+public final class Region {
+    private final Coordinate base;
+    private final int height;
+    private final int width;
     
-    private final int x;
-    private final int y;
-    
-    Direction(int xOffset, int yOffset) {
-        this.x = xOffset;
-        this.y = yOffset;
+    Region(Coordinate start, Coordinate end) {
+        this.base = start;
+        this.height = Coordinate.verticalDiff( start, end );
+        this.width = Coordinate.horizontalDiff( start, end );
+    }
+    Region(Coordinate start, int dimension) {
+        this.base = start;
+        this.height = dimension;
+        this.width = dimension;
     }
     
-    public int getX() {
-        return this.x;
+    public Coordinate getBase() {
+        return this.base;
     }
-    public int getY() {
-        return this.y;
+    public int getWidth() {
+        return this.width;
     }
-    public int getDistance(Coordinate pos) {
-        return (this.getX() * pos.getX()) + (this.getY() * pos.getY());
+    public int getHeight() {
+        return this.height;
     }
     
-    public abstract Direction opposite();
-    public static Direction fromRotation(float rotation) {
-        if (rotation < 45f)
-            return Direction.SOUTH;
-        if (rotation < 135)
-            return Direction.EAST;
-        if (rotation < 225)
-            return Direction.NORTH;
-        if (rotation < 315)
-            return Direction.WEST;
-        return Direction.SOUTH;
+    @Override
+    public String toString() {
+        return this.base.toString() + "-" + this.width + "x" + this.height;
+    }
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (!(obj instanceof Region))
+            return false;
+        Region region = (Region) obj;
+        return Objects.equals(this.getBase(), region.getBase())
+            && (this.getWidth() == region.getWidth())
+            && (this.getHeight() == region.getHeight());
+    }
+    @Override
+    public int hashCode() {
+        return Objects.hash( this.getBase(), this.width, this.height );
     }
 }

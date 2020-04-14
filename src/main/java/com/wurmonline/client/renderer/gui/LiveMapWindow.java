@@ -12,7 +12,6 @@ import org.gotti.wurmonline.clientmods.livehudmap.LiveHudMapMod;
 import org.gotti.wurmonline.clientmods.livehudmap.LiveMap;
 import org.gotti.wurmonline.clientmods.livehudmap.MapLayer;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.Coordinate;
-import org.gotti.wurmonline.clientmods.livehudmap.assets.Sklotopolis;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.SklotopolisServer;
 import org.gotti.wurmonline.clientmods.livehudmap.renderer.RenderType;
 import org.gotti.wurmunlimited.modloader.classhooks.HookManager;
@@ -31,6 +30,9 @@ public class LiveMapWindow extends WWindow {
 	private final BufferedImage iconImage;
 	private final LiveMapView liveMapView;
 	private final WurmTextPanel playerPosition;
+	
+	private Coordinate dragAt = null;
+	private int dragX = 0, dragY = 0;
 	
 	public LiveMapWindow(World world) {
 		super("Live map", true);
@@ -58,13 +60,16 @@ public class LiveMapWindow extends WWindow {
 		buttons.setInitialSize(32, 256, false); // Button panel size
 		
 		// Add the sidebar buttons for zooming
-		buttons.addComponent(createButton("+", "Zoom in" , 0, (SimpleButtonListener) p0 -> this.liveMap.zoomIn()));
-		buttons.addComponent(createButton("-", "Zoom out" , 1, (SimpleButtonListener) p0 -> this.liveMap.zoomOut()));
+		buttons.addComponent(this.createButton("+", "Zoom in" , 1, button -> this.liveMap.zoomIn()));
+		buttons.addComponent(this.createButton("-", "Zoom out" , 2, button -> this.liveMap.zoomOut()));
+		
+		// Add the sidebar buttons for resetting positioning
+		buttons.addComponent(this.createButton("/", "Center on Player", 3, button -> this.liveMap.setCenter( null )));
 		
 		// Add the sidebar buttons for changing the map view
-		/*buttons.addComponent(createButton("Flat", "Flat view" , 2, (SimpleButtonListener) p0 -> this.liveMap.setRenderer(MapLayer.SURFACE, RenderType.FLAT)));
-		buttons.addComponent(createButton("3D", "Pseudo 3D view" , 3, (SimpleButtonListener) p0 -> this.liveMap.setRenderer(MapLayer.SURFACE, RenderType.ISOMETRIC)));
-		buttons.addComponent(createButton("Topo", "Topographic view" , 4, (SimpleButtonListener) p0 -> this.liveMap.setRenderer(MapLayer.SURFACE, RenderType.TOPOGRAPHIC)));*/
+		/*buttons.addComponent(createButton("Flat", "Flat view" , 4, (SimpleButtonListener) p0 -> this.liveMap.setRenderer(MapLayer.SURFACE, RenderType.FLAT)));
+		buttons.addComponent(createButton("3D", "Pseudo 3D view" , 5, (SimpleButtonListener) p0 -> this.liveMap.setRenderer(MapLayer.SURFACE, RenderType.ISOMETRIC)));
+		buttons.addComponent(createButton("Topo", "Topographic view" , 6, (SimpleButtonListener) p0 -> this.liveMap.setRenderer(MapLayer.SURFACE, RenderType.TOPOGRAPHIC)));*/
 		
 		// Set the map image as the main component
 		this.mainPanel.setComponent((this.liveMapView = new LiveMapView("Live map", this.liveMap, 256, 256)), WurmBorderPanel.CENTER);
@@ -104,14 +109,14 @@ public class LiveMapWindow extends WWindow {
 				return null;
 			}
 		} catch (IOException e) {
-			LiveHudMapMod.log( e );
+			LiveHudMapMod.log(e);
 			return null;
 		}
 	}
 	
-	private WButton createButton(String label, String tooltip, int textureIndex, ButtonListener listener) {
+	private WButton createButton(String label, String tooltip, int textureIndex, SimpleButtonListener listener) {
 		if (iconImage != null) {
-			BufferedImage image = iconImage.getSubimage(textureIndex * 32, 0, 32, 32);
+			BufferedImage image = iconImage.getSubimage((textureIndex - 1) * 32, 0, 32, 32);
 			ImageTexture texture = ImageTextureLoader.loadNowrapNearestTexture(image, false);
 			return new LiveMapButton("", tooltip, WurmComponent.LARGE_ICON_SIZE, WurmComponent.LARGE_ICON_SIZE, texture, listener);
 		} else {
@@ -128,7 +133,12 @@ public class LiveMapWindow extends WWindow {
 	 */
 	@Override
 	protected void mouseDragged(int xMouse, int yMouse) {
-		this.dragger.mouseDragged( xMouse, yMouse );
+		if (this.dragger.isDisabled()) {
+			if (this.dragAt != null) {
+				Coordinate diff = this.mousePosToCoordinate(xMouse, yMouse);
+				this.liveMap.setCenter(this.dragAt.add( diff ));
+			}
+		} else this.dragger.mouseDragged( xMouse, yMouse );
 	}
 	
 	/**
@@ -139,7 +149,17 @@ public class LiveMapWindow extends WWindow {
 	 */
 	@Override
 	protected void leftPressed(int xMouse, int yMouse, int clickCount) {
-		this.dragger.leftPressed( xMouse, yMouse, clickCount );
+		if (this.dragger.isDisabled()) {
+			LiveHudMapMod.log("Mouse click count: " + clickCount);
+			if (clickCount > 1) {
+				this.liveMap.setCenter(this.mousePosToCoordinate(xMouse, yMouse));
+				this.liveMap.zoomIn();
+			} else {
+				this.dragAt = this.mousePosToCoordinate(xMouse, yMouse);
+				this.dragX = xMouse;
+				this.dragY = yMouse;
+			}
+		} else this.dragger.leftPressed( xMouse, yMouse, clickCount );
 	}
 	
 	/**
@@ -149,7 +169,9 @@ public class LiveMapWindow extends WWindow {
 	 */
 	@Override
 	protected void leftReleased(int xMouse, int yMouse) {
-		this.dragger.leftReleased( xMouse, yMouse );
+		if (this.dragger.isDisabled()) {
+			this.dragAt = null;
+		} else this.dragger.leftReleased( xMouse, yMouse );
 	}
 	
 	/**
@@ -194,9 +216,13 @@ public class LiveMapWindow extends WWindow {
 		popup.addButton(SimpleButtonListener.livePopup(popup,SimpleButtonListener.toggleHidden(LiveMap.SHOW_BUILDINGS) + " Buildings", this.liveMap::toggleShowBuildings));
 		popup.addButton(SimpleButtonListener.livePopup(popup,SimpleButtonListener.toggleHidden(LiveMap.SHOW_ORES) + " Ores", this.liveMap::toggleShowOres));
 		
-		popup.addSeparator();
-		popup.addButton(SimpleButtonListener.livePopup(popup, SimpleButtonListener.toggleEnable(LiveMap.ALWAYS_NORTH) + " true north", this.liveMap::toggleTrueNorth));
-		popup.addButton(SimpleButtonListener.livePopup(popup, "Refresh deed info", this.liveMap::initializeServer));
+		if (server != null) {
+			popup.addSeparator();
+			popup.addButton(SimpleButtonListener.livePopup(popup, "Find Deed", LiveHudMapMod::openDeedFinderWindow));
+			popup.addButton(SimpleButtonListener.livePopup(popup, "Find Route", LiveHudMapMod::openDeedRouteWindow));
+			//popup.addButton(SimpleButtonListener.livePopup(popup, SimpleButtonListener.toggleEnable(LiveMap.ALWAYS_NORTH) + " true north", this.liveMap::toggleTrueNorth));
+			popup.addButton(SimpleButtonListener.livePopup(popup, "Refresh deed info", this.liveMap::initializeServer));
+		}
 		
 		RenderType renderType = this.liveMap.getRenderer();
 		

@@ -2,8 +2,11 @@ package org.gotti.wurmonline.clientmods.livehudmap.renderer;
 
 import com.wurmonline.client.game.CaveDataBuffer;
 import com.wurmonline.client.renderer.PickData;
+import com.wurmonline.client.renderer.cell.CellRenderer;
 import com.wurmonline.mesh.Tiles.Tile;
+import org.gotti.wurmonline.clientmods.livehudmap.LiveHudMapMod;
 import org.gotti.wurmonline.clientmods.livehudmap.LiveMap;
+import org.gotti.wurmonline.clientmods.livehudmap.MapLayer;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.Coordinate;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.Direction;
 
@@ -13,8 +16,8 @@ public abstract class AbstractCaveRenderer extends MapRenderer<CaveDataBuffer> {
 	
 	protected static final float MAP_HEIGHT = 1000;
 	
-	public AbstractCaveRenderer( RenderType type, CaveDataBuffer buffer) {
-		super( type, buffer );
+	public AbstractCaveRenderer(CellRenderer renderer, CaveDataBuffer buffer) {
+		super(MapLayer.CAVE, renderer, buffer );
 	}
 	
 	protected boolean isTunnel( Coordinate pos ) {
@@ -25,10 +28,10 @@ public abstract class AbstractCaveRenderer extends MapRenderer<CaveDataBuffer> {
 		return tile == Tile.TILE_CAVE || tile == Tile.TILE_CAVE_EXIT || ((tile != null) && (tile.isReinforcedFloor() || tile.isRoad()));
 	}
 	protected boolean isSurroundedByRock( Coordinate pos ) {
-		return !isTunnel(pos.offset( Direction.NORTH ))
-			&& !isTunnel(pos.offset( Direction.EAST ))
-			&& !isTunnel(pos.offset( Direction.SOUTH ))
-			&& !isTunnel(pos.offset( Direction.WEST ));
+		return !this.isTunnel(pos.offset( Direction.NORTH ))
+			&& !this.isTunnel(pos.offset( Direction.EAST ))
+			&& !this.isTunnel(pos.offset( Direction.SOUTH ))
+			&& !this.isTunnel(pos.offset( Direction.WEST ));
 	}
 	
 	@Override
@@ -64,5 +67,30 @@ public abstract class AbstractCaveRenderer extends MapRenderer<CaveDataBuffer> {
 	@Override
 	protected Color tileColor(LiveMap map, Tile tile, Coordinate pos) {
 		return map.tileColor(tile, pos, CaveColors::getColorFor );
+	}
+	
+	@Override
+	public final RenderType getRenderType() {
+		return RenderType.CAVE;
+	}
+	
+	@Override
+	protected Tile getEffectiveTileType( Coordinate pos ) {
+		Tile tile = super.getEffectiveTileType( pos );
+		
+		// If tile is an ore
+		if ((!LiveMap.SHOW_ORES) && tile.isOreCave())
+			return this.getDefaultTile();
+		
+		// If ore should be hidden if it is fully concealed
+		if (!LiveHudMapMod.SHOW_HIDDEN_ORE && tile != Tile.TILE_CAVE_WALL && !this.isTunnel( tile ) && this.isSurroundedByRock( pos ))
+			return this.getDefaultTile();
+		
+		return tile;
+	}
+	
+	@Override
+	protected Tile getDefaultTile() {
+		return Tile.TILE_CAVE_WALL;
 	}
 }

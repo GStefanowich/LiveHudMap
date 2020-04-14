@@ -1,24 +1,45 @@
+/*
+ * This software is licensed under the MIT License
+ * https://github.com/GStefanowich/LiveHudMap
+ *
+ * Copyright (c) 2019 Gregory Stefanowich
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package org.gotti.wurmonline.clientmods.livehudmap.reflection;
 
 import com.wurmonline.client.renderer.GroundItemData;
 import com.wurmonline.client.renderer.cell.GroundItemCellRenderable;
-import org.gotti.wurmonline.clientmods.livehudmap.LiveHudMapMod;
-import org.gotti.wurmunlimited.modloader.ReflectionUtil;
 
 import java.lang.reflect.Field;
 
 public final class GroundItems {
     private GroundItems() {}
     
+    private static final Field ITEM_DATA;
+    
     public static GroundItemData getData(GroundItemCellRenderable cell) {
-        if (cell == null) return null;
-        try {
-            Field field = ReflectionUtil.getField(cell.getClass(), "item");
-            return ReflectionUtil.getPrivateField(cell, field);
-        } catch (IllegalAccessException | NoSuchFieldException e) {
-            LiveHudMapMod.log( e );
-            return null;
-        }
+        return Reflection.getPrivateField(cell, ITEM_DATA);
     }
     
+    static {
+        ITEM_DATA = Reflection.getField(GroundItemCellRenderable.class, "item");
+    }
 }

@@ -25,10 +25,25 @@
 
 package org.gotti.wurmonline.clientmods.livehudmap.assets;
 
-public enum EntityFilter {
-    PLAYER,
-    VEHICLE,
-    CREATURE,
-    HOSTILE,
-    OBJECTS
+import com.wurmonline.client.renderer.structures.BridgeData;
+import com.wurmonline.client.renderer.structures.HouseData;
+import com.wurmonline.client.renderer.structures.RoofData;
+import com.wurmonline.client.renderer.structures.StructureData;
+
+public enum AbstractTileType {
+    BRIDGE,
+    DEED,
+    GROUND,
+    HOUSE,
+    ROOF;
+    
+    public static AbstractTileType getByClassName(StructureData structure) {
+        if (structure instanceof BridgeData)
+            return BRIDGE;
+        if (structure instanceof RoofData)
+            return ROOF;
+        if (structure instanceof HouseData)
+            return HOUSE;
+        return null;
+    }
 }

@@ -7,25 +7,25 @@ public enum RenderType {
 	FLAT {
 		@Override
 		public MapRenderer createMapRenderer( World world ) {
-			return new MapRendererFlat(this, world.getNearTerrainBuffer());
+			return new MapRendererFlat(world.getCellRenderer(), world.getNearTerrainBuffer());
 		}
 	},
 	ISOMETRIC {
 		@Override
 		public MapRenderer createMapRenderer( World world ) {
-			return new MapRendererIsometric(this, world.getNearTerrainBuffer());
+			return new MapRendererIsometric(world.getCellRenderer(), world.getNearTerrainBuffer());
 		}
 	},
 	TOPOGRAPHIC {
 		@Override
 		public MapRenderer createMapRenderer( World world ) {
-			return new MapRendererTopographic(this, world.getNearTerrainBuffer());
+			return new MapRendererTopographic(world.getCellRenderer(), world.getNearTerrainBuffer());
 		}
 	},
 	CAVE {
 		@Override
 		public MapRenderer createMapRenderer(World world) {
-			return new MapRendererCave(this, world.getCaveBuffer());
+			return new MapRendererCave(world.getCellRenderer(), world.getCaveBuffer());
 		}
 		
 		@Override
@@ -42,5 +42,4 @@ public enum RenderType {
 			return 256;
 		return 128;
 	}
-
 }

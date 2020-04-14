@@ -25,10 +25,18 @@
 
 package org.gotti.wurmonline.clientmods.livehudmap.assets;
 
-public enum EntityFilter {
-    PLAYER,
-    VEHICLE,
-    CREATURE,
-    HOSTILE,
-    OBJECTS
+import com.wurmonline.client.game.PlayerObj;
+import com.wurmonline.client.renderer.GroundItemData;
+import com.wurmonline.client.renderer.cell.CreatureCellRenderable;
+
+public final class TilePlayerData extends TileEntityData {
+    public TilePlayerData(EntityType type, CreatureCellRenderable creature) {
+        super(type, creature);
+    }
+    public TilePlayerData(EntityType type, GroundItemData groundItem) {
+        super(type, groundItem);
+    }
+    public TilePlayerData(PlayerObj player) {
+        super(player);
+    }
 }

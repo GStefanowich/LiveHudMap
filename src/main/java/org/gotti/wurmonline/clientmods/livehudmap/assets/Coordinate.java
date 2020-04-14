@@ -1,27 +1,109 @@
+/*
+ * This software is licensed under the MIT License
+ * https://github.com/GStefanowich/LiveHudMap
+ *
+ * Copyright (c) 2019 Gregory Stefanowich
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 package org.gotti.wurmonline.clientmods.livehudmap.assets;
 
 import com.wurmonline.client.game.PlayerPosition;
+import org.gotti.wurmonline.clientmods.livehudmap.LiveMap;
 
 import java.util.Objects;
 
 public final class Coordinate {
     
-    private static final Coordinate ROOT = new Coordinate( 0, 0 );
-    private final int x;
-    private final int y;
+    private static final Coordinate MIN = Coordinate.of(0, 0);
+    private static final Coordinate MAX = Coordinate.of(4096,4096);
     
-    private Coordinate(int x, int y) {
+    private final int x; // Tile X
+    private final int y; // Tile Y
+    private final int z; // Height Value
+    
+    private Coordinate(int x, int y, int z) {
         this.x = x;
         this.y = y;
+        this.z = z;
     }
     
+    /**
+     * @return Get the HORIZONTAL position
+     */
     public int getX() {
         return this.x;
     }
+    
+    /**
+     * @return Get the VERTICAL position
+     */
     public int getY() {
         return this.y;
     }
     
+    /**
+     * @return Get the HEIGHT of the position
+     */
+    public int getZ() {
+        return this.z;
+    }
+    
+    /**
+     * @return Convert the X tile to a game tile
+     */
+    public int getTileX() {
+        return this.getX() * 4;
+    }
+    
+    /**
+     * @return Convert the Y tile to a game tile
+     */
+    public int getTileY() {
+        return this.getY() * 4;
+    }
+    
+    /**
+     * @return Get the Coordinate of the nearest 64x64 Tile point
+     */
+    public Coordinate nearestTileMarker() {
+        int x = Coordinate.grid(this.getX());
+        int y = Coordinate.grid(this.getY());
+        // Return a coordinate >0
+        return Coordinate.of(
+            Math.max(x, 0),
+            Math.max(y, 0)
+        );
+    }
+    
+    /**
+     * @return Get the 64x64 Region that the Coordinate is in
+     */
+    public Region nearestRegion() {
+        Coordinate base = this.nearestTileMarker();
+        return new Region(base, LiveMap.SAVE_DIMENSIONS);
+    }
+    
+    /*
+     * Maths to add or subtract distance based on numerical values
+     */
     public Coordinate add(Coordinate pos) {
         return this.add(pos.getX(), pos.getY());
     }
@@ -41,14 +123,20 @@ public final class Coordinate {
         );
     }
     
+    /*
+     * Maths to add or subtract distance based on directions
+     */
     public Coordinate offset(Direction direction) {
         return this.offset( direction, 1 );
     }
     public Coordinate offset(Direction direction, int count) {
-        return new Coordinate(this.getX() + (direction.getX() * count), this.getY() + (direction.getY() * count));
+        return Coordinate.of(
+            this.getX() + (direction.getX() * count),
+            this.getY() + (direction.getY() * count)
+        );
     }
     public Coordinate offset(Direction dirA, int cA, Direction dirB, int cB) {
-        return new Coordinate(
+        return Coordinate.of(
             this.getX()
                 + (dirA.getX() * cA)
                 + (dirB.getX() * cB),
@@ -58,19 +146,61 @@ public final class Coordinate {
         );
     }
     
-    public static Coordinate zero() {
-        return Coordinate.ROOT;
+    /*
+     * Conditional checks to see if points share an X or Y value
+     */
+    public boolean sameX(Coordinate pos) {
+        return this.getX() == pos.getX();
     }
+    public boolean sameY(Coordinate pos) {
+        return this.getY() == pos.getY();
+    }
+    
+    /*
+     * Area Constructors using this and another point as bases
+     */
+    public Area to(int x, int y) {
+        return this.to(Coordinate.of(x, y));
+    }
+    public Area to(Coordinate second) {
+        return Area.of(this, second);
+    }
+    
+    /*
+     * Min and Max Coordinates of the map
+     */
+    public static Coordinate min() {
+        return Coordinate.MIN;
+    }
+    public static Coordinate max() { return Coordinate.MAX; }
+    
     public static Coordinate of(int x, int y) {
-        return new Coordinate(x, y);
+        return new Coordinate(x, y, 0);
     }
     public static Coordinate of(float x, float y) {
         return Coordinate.of((int)x, (int)y);
     }
+    public static Coordinate of(int x, int y, int z) {
+        return new Coordinate(x, y, z);
+    }
     public static Coordinate of(PlayerPosition pos) {
-        return Coordinate.of(pos.getTileX(), pos.getTileY());
+        return Coordinate.of(pos.getTileX(), pos.getTileY(), pos.getLayer());
     }
     
+    public static int horizontalDiff(Coordinate start, Coordinate end) {
+        return Direction.EAST.getDistance(start) - Direction.EAST.getDistance(end);
+    }
+    public static int verticalDiff(Coordinate start, Coordinate end) {
+        return Direction.SOUTH.getDistance(start) - Direction.SOUTH.getDistance(end);
+    }
+    public static int grid(int coordinate) {
+        return (coordinate) - (coordinate % LiveMap.SAVE_DIMENSIONS);
+    }
+    
+    @Override
+    public String toString() {
+        return this.getX() + "x" + this.getY();
+    }
     @Override
     public boolean equals(Object obj) {
         if (this == obj)
@@ -78,11 +208,10 @@ public final class Coordinate {
         if (!(obj instanceof Coordinate))
             return false;
         Coordinate pos = (Coordinate)obj;
-        return (pos.getX() == this.getX()) && (pos.getY() == this.getY());
+        return (pos.getX() == this.getX()) && (pos.getY() == this.getY() && (pos.getZ() == this.getZ()));
     }
     @Override
     public int hashCode() {
-        return Objects.hash( this.getX(), this.getY() );
+        return Objects.hash( this.getX(), this.getY(), this.getZ() );
     }
-    
 }

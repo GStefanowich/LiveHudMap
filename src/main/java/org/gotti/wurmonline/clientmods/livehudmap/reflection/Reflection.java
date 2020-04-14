@@ -23,12 +23,32 @@
  * SOFTWARE.
  */
 
-package org.gotti.wurmonline.clientmods.livehudmap.assets;
+package org.gotti.wurmonline.clientmods.livehudmap.reflection;
 
-public enum EntityFilter {
-    PLAYER,
-    VEHICLE,
-    CREATURE,
-    HOSTILE,
-    OBJECTS
+import org.gotti.wurmonline.clientmods.livehudmap.LiveHudMapMod;
+import org.gotti.wurmunlimited.modloader.ReflectionUtil;
+
+import java.lang.reflect.Field;
+
+public final class Reflection {
+    private Reflection() {}
+    
+    public static Field getField(Class<?> cl, String field) {
+        try {
+            return ReflectionUtil.getField(cl, field);
+        } catch (NoSuchFieldException e) {
+            LiveHudMapMod.log(e);
+        }
+        return null;
+    }
+    public static <T> T getPrivateField(Object object, Field field) {
+        if (object == null) return null;
+        try {
+            return ReflectionUtil.getPrivateField(object, field);
+        } catch (IllegalAccessException e) {
+            LiveHudMapMod.log(e);
+            return null;
+        }
+    }
+    
 }
