@@ -12,6 +12,8 @@ import org.gotti.wurmonline.clientmods.livehudmap.LiveHudMapMod;
 import org.gotti.wurmonline.clientmods.livehudmap.LiveMap;
 import org.gotti.wurmonline.clientmods.livehudmap.MapLayer;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.Coordinate;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.Server;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.Servers;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.SklotopolisServer;
 import org.gotti.wurmonline.clientmods.livehudmap.renderer.RenderType;
 import org.gotti.wurmunlimited.modloader.classhooks.HookManager;
@@ -186,7 +188,7 @@ public class LiveMapWindow extends WWindow {
 	 */
 	@Override
 	protected void rightPressed(final int xMouse, final int yMouse, int clickCount) {
-		final SklotopolisServer server = this.liveMap.getServer();
+		final Server server = Servers.getServer();
 		
 		// Offset cursor and window to get tile pos
 		final Coordinate tile = this.mousePosToCoordinate( xMouse, yMouse );
@@ -201,8 +203,8 @@ public class LiveMapWindow extends WWindow {
 		popup.addSeparator();
 		
 		// Add URL opener
-		if (server != null) {
-			String mapURL = server.getMapURL( tile );
+		if (server instanceof SklotopolisServer) {
+			String mapURL = ((SklotopolisServer) server).getMapURL( tile );
 			if (mapURL != null) {
 				popup.addButton(SimpleButtonListener.livePopup(popup, "Open in Browser", () -> Computer.openURL( mapURL )));
 				popup.addButton(SimpleButtonListener.livePopup(popup, "Copy location URL", () -> Computer.setClipboardContents( mapURL )));

@@ -25,38 +25,50 @@
 
 package org.gotti.wurmonline.clientmods.livehudmap.assets;
 
+import com.wurmonline.client.game.World;
+
 import java.util.Collection;
 import java.util.HashSet;
 
-public class Sklotopolis {
-    public static Collection<SklotopolisServer> SERVERS = new HashSet<>();
+public class Servers {
+    public static Collection<Server> SERVERS = new HashSet<>();
     
     public static final SklotopolisServer NOVUS;
     public static final SklotopolisServer LIBERTY;
     public static final SklotopolisServer CAZA;
     
-    private static SklotopolisServer ACTIVE = null;
+    private static Server ACTIVE = null;
     
-    private static SklotopolisServer addServer(SklotopolisServer server) {
-        Sklotopolis.SERVERS.add( server );
+    private static <T extends Server> T addServer(T server) {
+        Servers.SERVERS.add( server );
         return server;
     }
-    public static SklotopolisServer getServerByName( String name ) {
+    public static Server getServerByName(String name) {
         // Get the server by it's name
-        for (SklotopolisServer server : SERVERS) if ( server.getName().equalsIgnoreCase( name ) )
-            return Sklotopolis.setActive(server);
-        return null;
+        for (Server server : SERVERS) if ( server.getName().equalsIgnoreCase( name ) )
+            return Servers.setServer(server);
+        return new Server(name) {};
     }
     
-    private static SklotopolisServer setActive(SklotopolisServer server) {
-        // DeInitialize a previous server to save RAM (For server swapping)
-        if (Sklotopolis.ACTIVE != null)
-            Sklotopolis.ACTIVE.deInitialize();
-        // Set the new active server
-        return (Sklotopolis.ACTIVE = server);
+    public static Server initialize(World world) {
+        Server active = Servers.getServer();
+        if (active != null)
+            active.initialize(world);
+        return active;
     }
-    public static SklotopolisServer getActive() {
-        return Sklotopolis.ACTIVE;
+    public static Server reset() {
+        return Servers.setServer( null );
+    }
+    
+    private static Server setServer(Server server) {
+        // DeInitialize a previous server to save RAM (For server swapping)
+        if (Servers.ACTIVE != null)
+            Servers.ACTIVE.deInitialize();
+        // Set the new active server
+        return (Servers.ACTIVE = server);
+    }
+    public static Server getServer() {
+        return Servers.ACTIVE;
     }
     
     static {

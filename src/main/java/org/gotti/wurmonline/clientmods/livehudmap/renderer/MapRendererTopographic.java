@@ -42,7 +42,7 @@ public class MapRendererTopographic extends AbstractSurfaceRenderer {
 					grids.add(grid);
 					
 					// Update if the player is within view
-					if (LiveMap.isWithinPlayerView(pos)) {
+					if (this.canDrawAt(pos)) {
 						// Get the entities on the tile
 						Optional<? extends AbstractTileData> tileData = this.getHigherTile(
 							map.getEntitiesAt(pos),

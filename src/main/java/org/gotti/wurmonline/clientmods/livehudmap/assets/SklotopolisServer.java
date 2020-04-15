@@ -38,47 +38,37 @@ import java.util.Optional;
 import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class SklotopolisServer {
+public class SklotopolisServer extends Server {
     
-    private World world = null;
     
-    private final String serverName;
     private final Map<Coordinate, TileDeedData> deedBorders;
     private final Map<Coordinate, SklotopolisDeed> serverDeeds;
     
     public SklotopolisServer(String name) {
-        this.serverName = name;
+        super(name);
         this.serverDeeds = new ConcurrentHashMap<>();
         this.deedBorders = new ConcurrentHashMap<>();
     }
     
     /*
-     * Getters
+     * Initialize the world
      */
-    public String getName() {
-        return this.serverName;
-    }
-    public World getWorld() {
-        return this.world;
-    }
-    
-    /*
-     * Initialize deeds
-     */
+    @Override
     public void initialize(World world) {
-        this.world = world;
+        super.initialize(world);
         
-        //this.serverDeeds.clear();
         this.loadDeeds();
     }
+    @Override
     public void deInitialize() {
         this.serverDeeds.clear();
     }
+    
     private void loadDeeds() {
         if (this.getDeedURL() == null)
             return;
         this.serverDeeds.clear();
-        new Thread(() -> {
+        LiveMap.threadExecute(() -> {
             try {
                 Scanner scanner = new Scanner(new URL(this.getDeedURL()).openStream());
                 String body = scanner.useDelimiter("\\Z").next();
@@ -101,7 +91,7 @@ public class SklotopolisServer {
             } catch (IOException | JSONException e) {
                 LiveHudMapMod.log(e);
             }
-        }).start();
+        });
     }
     private void addDeed(SklotopolisDeed deed) {
         Coordinate nw = deed.getPerimeterNorthWest();

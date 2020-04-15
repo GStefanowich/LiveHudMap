@@ -29,6 +29,7 @@ import com.google.common.util.concurrent.SettableFuture;
 import org.gotti.wurmonline.clientmods.livehudmap.LiveHudMapMod;
 import org.gotti.wurmonline.clientmods.livehudmap.LiveMap;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.Coordinate;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.LiveMapConfig;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.Region;
 
 import javax.imageio.ImageIO;
@@ -69,7 +70,7 @@ public final class MapTile {
     }
     
     public void setAt(Coordinate pos, final float r, final float g, final float b) {
-        this.setInner(pos.getX() % LiveMap.SAVE_DIMENSIONS, pos.getY() % LiveMap.SAVE_DIMENSIONS, r, g, b);
+        this.setInner(pos.getTileX(), pos.getTileY(), r, g, b);
     }
     private void setInner(int x, int y, final float r, final float g, final float b) {
         int pixelPos = (x + y * this.area.getWidth()) * 3;
@@ -124,6 +125,7 @@ public final class MapTile {
             // Save the image
             success = ImageIO.write(this.image, "png", location);
             
+            // The MapTile is no longer "dirty" (Doesn't need to be saved again)
             this.dirty = false;
         }
         return success;
@@ -186,24 +188,35 @@ public final class MapTile {
         return Objects.hash( this.getBase(), this.getArea() );
     }
     
-    public static void saveToDisk(Region region, RenderType renderType, SettableFuture<MapTile> future) {
-        Path folder = Paths.get(
-            LiveHudMapMod.MOD_FOLDER.toString(),
-            LiveHudMapMod.getServerName(),
-            renderType.name().toLowerCase()
-        );
-        
-        try {
-            // If finished and not cancelled, Cancel the future
-            if (!(future.isDone() || future.isCancelled()))
-                future.cancel(false);
-            if (future.isDone()) {
+    /**
+     * Save a MapTile to disk
+     * @param region The region that is getting saved
+     * @param renderType The layer to save the region to
+     * @param future The future container of the MapTile to save
+     */
+    public static void saveToDisk(final Region region, final RenderType renderType, final SettableFuture<MapTile> future) {
+        // Execute the save on a separate thread
+        LiveMap.threadExecute(() -> {
+            // Create the path to save to
+            Path folder = Paths.get(
+                LiveHudMapMod.MOD_FOLDER.toString(),
+                LiveHudMapMod.getServerName(),
+                renderType.name().toLowerCase()
+            );
+            
+            try {
+                
+                // If finished and not cancelled, Cancel the future
+                if (!(future.isDone() || future.isCancelled()))
+                    future.cancel(false);
+                
                 // Save the MapTile
-                future.get()
-                    .save( folder, region.toString() );
+                if (future.isDone())
+                    future.get().save(folder, region.toString());
+                
+            } catch (InterruptedException | ExecutionException | IOException e) {
+                LiveHudMapMod.log(e);
             }
-        } catch (InterruptedException | ExecutionException | IOException e) {
-            LiveHudMapMod.log(e);
-        }
+        });
     }
 }

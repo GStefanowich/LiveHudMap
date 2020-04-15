@@ -69,27 +69,40 @@ public final class Coordinate {
     /**
      * @return Convert the X tile to a game tile
      */
-    public int getTileX() {
+    public int getCellX() {
         return this.getX() * 4;
     }
     
     /**
      * @return Convert the Y tile to a game tile
      */
-    public int getTileY() {
+    public int getCellY() {
         return this.getY() * 4;
+    }
+    
+    /**
+     * @return
+     */
+    public int getTileX() {
+        int tileX = this.getX() % LiveMapConfig.MAP_TILE_SIZE;
+        return (tileX < 0 ? LiveMapConfig.MAP_TILE_SIZE + tileX : tileX);
+    }
+    
+    /**
+     * @return
+     */
+    public int getTileY() {
+        int tileY = this.getY() % LiveMapConfig.MAP_TILE_SIZE;
+        return (tileY < 0 ? LiveMapConfig.MAP_TILE_SIZE + tileY : tileY);
     }
     
     /**
      * @return Get the Coordinate of the nearest 64x64 Tile point
      */
     public Coordinate nearestTileMarker() {
-        int x = Coordinate.grid(this.getX());
-        int y = Coordinate.grid(this.getY());
-        // Return a coordinate >0
         return Coordinate.of(
-            Math.max(x, 0),
-            Math.max(y, 0)
+            this.getX() - this.getTileX(),
+            this.getY() - this.getTileY()
         );
     }
     
@@ -98,7 +111,7 @@ public final class Coordinate {
      */
     public Region nearestRegion() {
         Coordinate base = this.nearestTileMarker();
-        return new Region(base, LiveMap.SAVE_DIMENSIONS);
+        return new Region(base, LiveMapConfig.MAP_TILE_SIZE);
     }
     
     /*
@@ -134,6 +147,16 @@ public final class Coordinate {
             this.getX() / by,
             this.getY() / by
         );
+    }
+    
+    /*
+     * Boolean checks
+     */
+    public boolean isNegative() {
+        return this.getX() < 0 || this.getY() < 0;
+    }
+    public boolean isPositive() {
+        return this.getX() >=0 && this.getY() >= 0;
     }
     
     /*
@@ -206,9 +229,6 @@ public final class Coordinate {
     public static int verticalDiff(Coordinate start, Coordinate end) {
         return Direction.SOUTH.getDistance(start) - Direction.SOUTH.getDistance(end);
     }
-    public static int grid(int coordinate) {
-        return (coordinate) - (coordinate % LiveMap.SAVE_DIMENSIONS);
-    }
     
     @Override
     public String toString() {
@@ -226,5 +246,11 @@ public final class Coordinate {
     @Override
     public int hashCode() {
         return Objects.hash( this.getX(), this.getY(), this.getZ() );
+    }
+    
+    public static boolean equals(Coordinate a, Coordinate b) {
+        if (a == null && b == null)
+            return true;
+        return (a != null) && a.equals(b);
     }
 }

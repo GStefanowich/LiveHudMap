@@ -11,8 +11,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Executors;
 import java.util.function.Function;
 
+import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ListeningExecutorService;
+import com.google.common.util.concurrent.MoreExecutors;
 import com.wurmonline.client.comm.ServerConnectionListenerClass;
 import com.wurmonline.client.renderer.GroundItemData;
 import com.wurmonline.client.renderer.cell.CreatureCellRenderable;
@@ -22,15 +27,18 @@ import com.wurmonline.mesh.Tiles.Tile;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.Coordinate;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.Direction;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.Area;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.LiveMapConfig;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.Server;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.TileDeedData;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.TileEntityData;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.EntityType;
-import org.gotti.wurmonline.clientmods.livehudmap.assets.Sklotopolis;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.Servers;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.SklotopolisServer;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.TileData;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.TilePlayerData;
 import org.gotti.wurmonline.clientmods.livehudmap.reflection.GroundItems;
 import org.gotti.wurmonline.clientmods.livehudmap.renderer.RenderType;
+import org.gotti.wurmonline.clientmods.livehudmap.renderer.TitleDisplay;
 import org.gotti.wurmunlimited.modloader.ReflectionUtil;
 
 import com.wurmonline.client.game.TerrainChangeListener;
@@ -46,12 +54,11 @@ import com.wurmonline.client.resources.textures.TextureLoader;
 
 public class LiveMap implements TerrainChangeListener, CaveBufferChangeListener {
 	
+	private static final ListeningExecutorService MAP_TILE_LOADER;
 	private static final Area MAP_BORDER = Area.of(Coordinate.min(), Coordinate.max());
 	private static final Area PLAYER_BORDER = Area.ofEmpty();
 	private static final Method PROCESS_IMAGE_METHOD;
 	private static Coordinate FIRST_MAP_SQUARE = Coordinate.min();
-	
-	public static final int SAVE_DIMENSIONS = 64;
 	
 	public static boolean SHOW_SELF = true;
 	public static boolean SHOW_DEEDS = true;
@@ -63,7 +70,7 @@ public class LiveMap implements TerrainChangeListener, CaveBufferChangeListener 
 	public static boolean SHOW_ROADS = false;
 	public static boolean SHOW_ORES = true;
 	
-	public static int REFRESH_RATE = ( LiveHudMapMod.USE_HIGH_RES_MAP ? 3 : 7 );
+	public static int REFRESH_RATE = 8;
 	
 	private int dirtyTimer = 0;
 	private int size;
@@ -73,7 +80,6 @@ public class LiveMap implements TerrainChangeListener, CaveBufferChangeListener 
 	private final Map<Long, StructureData> ref_Structures;
 	
 	private final World world;
-	private SklotopolisServer server = null;
 	
 	private MapLayer playerLayer = this.updateLayer();
 	
@@ -95,7 +101,6 @@ public class LiveMap implements TerrainChangeListener, CaveBufferChangeListener 
 		this.size = size;
 		
 		this.world = world;
-		this.server = null;
 		
 		this.world.getNearTerrainBuffer().addListener(this);
 		this.world.getCaveBuffer().addCaveBufferListener(this);
@@ -123,12 +128,12 @@ public class LiveMap implements TerrainChangeListener, CaveBufferChangeListener 
 		this.windowY = windowY;
 		
 		// Check the server the player is on
-		if (this.server == null) {
+		if (Servers.getServer() == null || (!Servers.getServer().getName().equalsIgnoreCase(this.world.getServerName()))) {
 			// Get the server
-			this.server = Sklotopolis.getServerByName(this.world.getServerName());
+			Servers.getServerByName(this.world.getServerName());
 			
 			// Initialize the servers deeds
-			if (this.server != null) this.server.initialize( this.world );
+			this.initializeServer();
 		}
 		
 		Coordinate newCurrentCenter = this.tickMapCenter();
@@ -174,8 +179,16 @@ public class LiveMap implements TerrainChangeListener, CaveBufferChangeListener 
 		}
 	}
 	private void update() {
-		if (this.onUpdate != null)
-			this.onUpdate.apply((this.server != null ? this.server.getName() + ": " : "") + this.currentMapCenter.getX() + ", " + this.currentMapCenter.getY() + " (" + this.getLayer().getZoom() + "x)");
+		// Update the information over the top of the map
+		if (this.onUpdate != null) {
+			this.onUpdate.apply(TitleDisplay.format(
+				Servers.getServer(),
+				this.world.getSeasonManager().getSeason(),
+				this.currentMapCenter,
+				this.getLayer().getZoom(),
+				this.world.getWurmTime()
+			));
+		}
 		this.dirty = false;
 	}
 	private MapLayer updateLayer() {
@@ -225,23 +238,23 @@ public class LiveMap implements TerrainChangeListener, CaveBufferChangeListener 
 	}
 	
 	public void setCenter(Coordinate pos) {
-		if (pos == null || LiveMap.isWithinMap(pos)) {
+		if (!Coordinate.equals(this.mapCenter, pos)) {
+			// Snap the position to the nearest position within the map
+			if (pos != null)
+				pos = LiveMap.snapNearestBorder(pos);
+			
 			this.mapCenter = pos;
 			this.markDirty();
 		}
 	}
 	
 	// Get the player information
-	public SklotopolisServer getServer() {
-		return this.server;
-	}
 	public World getWorld() {
 		return this.world;
 	}
 	
 	public void initializeServer() {
-		if (this.server != null)
-			this.server.initialize(this.world);
+		Servers.initialize(this.world);
 	}
 	
 	// Get the current layer that the player is on
@@ -465,18 +478,20 @@ public class LiveMap implements TerrainChangeListener, CaveBufferChangeListener 
 	 * Map Colors
 	 */
 	public final Color tileColor(Tile tile, Coordinate pos, Function<Tile, Color> function) {
+		Server server = Servers.getServer();
+		
 		// Color deed borders
-		if (this.server != null && LiveMap.SHOW_DEEDS) {
-			Optional<TileDeedData> deed = this.server.getDeedBorder(pos);
+		if (server instanceof SklotopolisServer && LiveMap.SHOW_DEEDS) {
+			Optional<TileDeedData> deed = ((SklotopolisServer) server).getDeedBorder(pos);
 			if (deed.isPresent())
 				return (this.getRenderer() == RenderType.CAVE ? Color.GRAY : deed.get().getColor());
 		}
 		
 		Color color = function.apply( tile == null ? Tile.TILE_DIRT : tile );
 		
-		if (this.server != null) {
+		if (server instanceof SklotopolisServer) {
 			// Color highways
-			if (LiveMap.SHOW_ROADS && this.server.isHighway( pos ))
+			if (LiveMap.SHOW_ROADS && ((SklotopolisServer) server).isHighway( pos ))
 				return color.brighter();
 			
 			// Get information on the tile
@@ -574,13 +589,32 @@ public class LiveMap implements TerrainChangeListener, CaveBufferChangeListener 
 	public static Coordinate getMapOffset(Coordinate pos) {
 		return pos.sub(LiveMap.FIRST_MAP_SQUARE);
 	}
+	public static Coordinate snapNearestBorder(Coordinate pos) {
+		return LiveMap.MAP_BORDER.snap(pos);
+	}
 	public static boolean isWithinMap(Coordinate pos) {
 		return LiveMap.MAP_BORDER.isWithin(pos);
 	}
 	public static boolean isWithinPlayerView(Coordinate pos) {
 		return LiveMap.PLAYER_BORDER.isWithin(pos);
 	}
+	
+	/**
+	 * @return Executor Thread for reading MapTiles
+	 */
+	private static ListeningExecutorService getMapLoader() {
+		return LiveMap.MAP_TILE_LOADER;
+	}
+	public static <T> ListenableFuture<T> threadExecute(Callable<T> callable) {
+		return LiveMap.getMapLoader().submit(callable);
+	}
+	public static ListenableFuture<?> threadExecute(Runnable runnable) {
+		return LiveMap.getMapLoader().submit(runnable);
+	}
+	
 	static {
+		MAP_TILE_LOADER = MoreExecutors.listeningDecorator(Executors.newFixedThreadPool(LiveMapConfig.THREAD_COUNT));
+		
 		try {
 			PROCESS_IMAGE_METHOD = ReflectionUtil.getMethod(TextureLoader.class, "preprocessImage", new Class[] { BufferedImage.class, boolean.class });
 		} catch (NoSuchMethodException e) {

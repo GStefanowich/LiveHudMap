@@ -121,9 +121,9 @@ public class TileData {
         return Collections.singletonList( this.building );
     }*/
     public Optional<TileDeedData> getDeed() {
-        SklotopolisServer server = Sklotopolis.getActive();
-        if (server != null)
-            return server.getDeedBorder( this.pos );
+        Server server = Servers.getServer();
+        if (server instanceof SklotopolisServer)
+            return ((SklotopolisServer) server).getDeedBorder( this.pos );
         return Optional.empty();
     }
     

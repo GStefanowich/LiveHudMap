@@ -9,6 +9,7 @@ import org.gotti.wurmonline.clientmods.livehudmap.LiveMap;
 import org.gotti.wurmonline.clientmods.livehudmap.MapLayer;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.Coordinate;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.Direction;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.LiveMapConfig;
 
 import java.awt.Color;
 
@@ -83,7 +84,7 @@ public abstract class AbstractCaveRenderer extends MapRenderer<CaveDataBuffer> {
 			return this.getDefaultTile();
 		
 		// If ore should be hidden if it is fully concealed
-		if (!LiveHudMapMod.SHOW_HIDDEN_ORE && tile != Tile.TILE_CAVE_WALL && !this.isTunnel( tile ) && this.isSurroundedByRock( pos ))
+		if (!LiveMapConfig.SHOW_HIDDEN_ORE && tile != Tile.TILE_CAVE_WALL && !this.isTunnel( tile ) && this.isSurroundedByRock( pos ))
 			return this.getDefaultTile();
 		
 		return tile;

@@ -36,7 +36,10 @@ import org.gotti.wurmonline.clientmods.livehudmap.LiveMap;
 import org.gotti.wurmonline.clientmods.livehudmap.MapLayer;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.AbstractTileType;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.Coordinate;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.LiveMapConfig;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.Region;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.Server;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.Servers;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.TileEntityData;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.SklotopolisDeed;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.SklotopolisServer;
@@ -59,9 +62,9 @@ public abstract class MapRenderer<DataType extends TerrainDataInformationProvide
 		this.buffer = buffer;
 		this.renderer = renderer;
 		this.mapTiles = CacheBuilder.newBuilder()
-			.maximumSize(256)
-			.expireAfterAccess(30, TimeUnit.SECONDS)
-			.refreshAfterWrite(30, TimeUnit.SECONDS)
+			.maximumSize((long)(Math.pow(Math.floorDiv(this.getRenderType().getMapSize(), LiveMapConfig.MAP_TILE_SIZE), 2) * 3))
+			.expireAfterAccess(LiveMapConfig.SAVE_SECONDS, TimeUnit.SECONDS)
+			.refreshAfterWrite(LiveMapConfig.SAVE_SECONDS, TimeUnit.SECONDS)
 			.removalListener((RemovalListener<Region, SettableFuture<MapTile>>) notification -> {
 				// Save the Tile to disk when it gets unloaded
 				MapTile.saveToDisk(notification.getKey(), MapRenderer.this.getRenderType(), notification.getValue());
@@ -73,7 +76,7 @@ public abstract class MapRenderer<DataType extends TerrainDataInformationProvide
 					SettableFuture<MapTile> future = SettableFuture.create();
 					
 					// Set the action that creatures the map from file
-					future.setFuture(LiveHudMapMod.getMapLoader().submit(() -> {
+					future.setFuture(LiveMap.threadExecute(() -> {
 						// Load the map from the disk using "key"
 						Path subFolder = Paths.get(LiveHudMapMod.MOD_FOLDER.toString(), LiveHudMapMod.getServerName(), MapRenderer.this.getRenderType().name().toLowerCase());
 						
@@ -145,6 +148,15 @@ public abstract class MapRenderer<DataType extends TerrainDataInformationProvide
 	public abstract BufferedImage createMapDump(LiveMap map, int leftX, int topY, int imageX, int imageY, Coordinate playerPos);
 	
 	/**
+	 * Check if new data should be written over the pos.
+	 * @param pos The position to check drawing ability
+	 * @return If the tile is within the players site, or outside the map border
+	 */
+	protected final boolean canDrawAt(Coordinate pos) {
+		return LiveMap.isWithinPlayerView(pos) || (!LiveMap.isWithinMap(pos));
+	}
+	
+	/**
 	 * Get the Data Buffer from the Server
 	 * @return The Servers DataBuffer
 	 */
@@ -188,10 +200,10 @@ public abstract class MapRenderer<DataType extends TerrainDataInformationProvide
 	 */
 	public final void tooltip(LiveMap map, PickData tooltip, Coordinate pos, Coordinate player) {
 		// If the tile is within a deed
-		SklotopolisServer server = map.getServer();
-		if (server != null && LiveMap.SHOW_DEEDS) {
+		Server server = Servers.getServer();
+		if (server instanceof SklotopolisServer && LiveMap.SHOW_DEEDS) {
 			// Add deed information
-			Optional<SklotopolisDeed> search = server.getDeed( pos );
+			Optional<SklotopolisDeed> search = ((SklotopolisServer) server).getDeed( pos );
 			search.ifPresent(deed -> {
 				tooltip.addText(deed.getName() + " [" + deed.getDimensions() + "]");
 				if (deed.isSpawn())
@@ -217,7 +229,7 @@ public abstract class MapRenderer<DataType extends TerrainDataInformationProvide
 	 * @return Tile at the location
 	 */
 	protected final Tile getTileType( Coordinate pos ) {
-		if (!LiveMap.isWithinPlayerView( pos ))
+		if (!(LiveMap.isWithinPlayerView(pos) && LiveMap.isWithinMap(pos)))
 			return this.getDefaultTile();
 		return this.getBuffer().getTileType(pos.getX(), pos.getY());
 	}
@@ -250,11 +262,11 @@ public abstract class MapRenderer<DataType extends TerrainDataInformationProvide
 		return data;
 	}
 	protected final Optional<BridgePartData> getBridgeAt(Coordinate pos, int playerLayer) {
-		Cell cell = this.getRenderer().findCell(pos.getTileX(), pos.getTileY(), playerLayer);
+		Cell cell = this.getRenderer().findCell(pos.getCellX(), pos.getCellY(), playerLayer);
 		return Optional.ofNullable(cell.getBridgeAtSurfaceAt(pos.getX(), pos.getY()));
 	}
 	protected final Optional<StructureData> getStructureAt(Coordinate pos, int playerLayer) {
-		Cell cell = this.getRenderer().findCell((float)pos.getTileX(), (float)pos.getTileY(), playerLayer);
+		Cell cell = this.getRenderer().findCell((float)pos.getCellX(), (float)pos.getCellY(), playerLayer);
 		Iterator<StructureData> structures = Structures.getStructures( cell ).iterator();
 		
 		StructureData data = null;

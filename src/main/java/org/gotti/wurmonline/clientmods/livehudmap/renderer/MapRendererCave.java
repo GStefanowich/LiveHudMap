@@ -37,7 +37,7 @@ public final class MapRendererCave extends AbstractCaveRenderer {
 					grids.add( grid );
 					
 					// Update if the player is within view
-					if (LiveMap.isWithinPlayerView(pos)) {
+					if (this.canDrawAt(pos)) {
 						// If the player is on the tile
 						List<TileEntityData> entityAt = map.getEntitiesAt(pos);
 						

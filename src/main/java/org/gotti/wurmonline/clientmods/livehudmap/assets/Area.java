@@ -53,11 +53,27 @@ public final class Area {
         this.southEast = Coordinate.of(upperX, upperY);
     }
     
-    public Coordinate getA() {
+    public Coordinate getNorthWest() {
         return this.northWest;
     }
-    public Coordinate getB() {
+    public Coordinate getSouthEast() {
         return this.southEast;
+    }
+    
+    public Coordinate snap(Coordinate old) {
+        if (this.isWithin( old ))
+            return old;
+        else if (old.isNegative()) {
+            return Coordinate.of(
+                Math.max(northWest.getX(), old.getX()),
+                Math.max(northWest.getY(), old.getY())
+            );
+        } else {
+            return Coordinate.of(
+                Math.min(southEast.getX(), old.getX()),
+                Math.min(southEast.getX(), old.getY())
+            );
+        }
     }
     
     public boolean isWithin(Coordinate c) {
@@ -85,10 +101,10 @@ public final class Area {
     
     @Override
     public String toString() {
-        return (this.getA().getX() + "." + this.getA().getY())
-            + "-" + (this.getA().getX() + "." + this.getB().getY())
-            + "-" + (this.getB().getX() + "." + this.getB().getY())
-            + "-" + (this.getB().getY() + "." + this.getA().getY());
+        return (this.getNorthWest().getX() + "." + this.getNorthWest().getY())
+            + "-" + (this.getNorthWest().getX() + "." + this.getSouthEast().getY())
+            + "-" + (this.getSouthEast().getX() + "." + this.getSouthEast().getY())
+            + "-" + (this.getSouthEast().getY() + "." + this.getNorthWest().getY());
     }
     @Override
     public boolean equals(Object obj) {
@@ -97,10 +113,10 @@ public final class Area {
         if (!(obj instanceof Area))
             return false;
         Area border = (Area)obj;
-        return Objects.equals(this.getA(), border.getA()) && Objects.equals(this.getB(), border.getB());
+        return Objects.equals(this.getNorthWest(), border.getNorthWest()) && Objects.equals(this.getSouthEast(), border.getSouthEast());
     }
     @Override
     public int hashCode() {
-        return Objects.hash( this.getA(), this.getB() );
+        return Objects.hash( this.getNorthWest(), this.getSouthEast() );
     }
 }

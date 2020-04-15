@@ -65,13 +65,13 @@ public final class SklotopolisDeed {
         
         int perimeterSize = blob.getInt("tilesPerimeter");
         this.perimeterBorder.set(
-            this.deedBorder.getA().offset(
+            this.deedBorder.getNorthWest().offset(
                 Direction.NORTH,
                 perimeterSize,
                 Direction.WEST,
                 perimeterSize
             ),
-            this.deedBorder.getB().offset(
+            this.deedBorder.getSouthEast().offset(
                 Direction.SOUTH,
                 perimeterSize,
                 Direction.EAST,
@@ -107,10 +107,10 @@ public final class SklotopolisDeed {
         return this.deedBorder;
     }
     public Coordinate getNorthWest() {
-        return this.getDeedBorder().getA();
+        return this.getDeedBorder().getNorthWest();
     }
     public Coordinate getSouthEast() {
-        return this.getDeedBorder().getB();
+        return this.getDeedBorder().getSouthEast();
     }
     
     // Perimeter Positioning
@@ -118,10 +118,10 @@ public final class SklotopolisDeed {
         return this.perimeterBorder;
     }
     public Coordinate getPerimeterNorthWest() {
-        return this.getPerimeterBorder().getA();
+        return this.getPerimeterBorder().getNorthWest();
     }
     public Coordinate getPerimeterSouthEast() {
-        return this.getPerimeterBorder().getB();
+        return this.getPerimeterBorder().getSouthEast();
     }
     
     public boolean isSpawn() {

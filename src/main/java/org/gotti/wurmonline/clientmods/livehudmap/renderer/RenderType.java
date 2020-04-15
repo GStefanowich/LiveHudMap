@@ -2,6 +2,7 @@ package org.gotti.wurmonline.clientmods.livehudmap.renderer;
 
 import com.wurmonline.client.game.World;
 import org.gotti.wurmonline.clientmods.livehudmap.LiveHudMapMod;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.LiveMapConfig;
 
 public enum RenderType {
 	FLAT {
@@ -30,7 +31,7 @@ public enum RenderType {
 		
 		@Override
 		public int getMapSize() {
-			if (LiveHudMapMod.USE_HIGH_RES_MAP) return 64;
+			if (LiveMapConfig.HIGH_RES_MAP) return 64;
 			return 32;
 		}
 	};
@@ -38,7 +39,7 @@ public enum RenderType {
 	public abstract MapRenderer createMapRenderer(World world);
 	
 	public int getMapSize() {
-		if (LiveHudMapMod.USE_HIGH_RES_MAP)
+		if (LiveMapConfig.HIGH_RES_MAP)
 			return 256;
 		return 128;
 	}
