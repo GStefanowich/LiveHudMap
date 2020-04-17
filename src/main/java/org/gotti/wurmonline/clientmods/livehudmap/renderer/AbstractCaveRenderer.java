@@ -1,10 +1,8 @@
 package org.gotti.wurmonline.clientmods.livehudmap.renderer;
 
 import com.wurmonline.client.game.CaveDataBuffer;
-import com.wurmonline.client.renderer.PickData;
 import com.wurmonline.client.renderer.cell.CellRenderer;
 import com.wurmonline.mesh.Tiles.Tile;
-import org.gotti.wurmonline.clientmods.livehudmap.LiveHudMapMod;
 import org.gotti.wurmonline.clientmods.livehudmap.LiveMap;
 import org.gotti.wurmonline.clientmods.livehudmap.MapLayer;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.Coordinate;
@@ -12,6 +10,7 @@ import org.gotti.wurmonline.clientmods.livehudmap.assets.Direction;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.LiveMapConfig;
 
 import java.awt.Color;
+import java.util.List;
 
 public abstract class AbstractCaveRenderer extends MapRenderer<CaveDataBuffer> {
 	
@@ -36,25 +35,27 @@ public abstract class AbstractCaveRenderer extends MapRenderer<CaveDataBuffer> {
 	}
 	
 	@Override
-	protected final void abstractTooltip(LiveMap map, PickData tooltip, Coordinate tilePos, Coordinate player) {
+	protected final List<String> positionData(List<String> list, LiveMap map, Coordinate tilePos) {
 		// Get the tile at the pos
 		final Tile tile = this.getEffectiveTileType( tilePos );
 		
 		// If tile has no loaded in yet
 		if (tile == null) {
-			tooltip.addText("Void");
+			list.add("Void");
 			
 		} else if (tile != Tile.TILE_CAVE_WALL && !isTunnel( tile )) {
 			// If not cave-wall, describe (ores)
-			tooltip.addText(tile.getName()
+			list.add(tile.getName()
 				.replace(" wall", "")
 				.replace(" vein", ""));
 			
 			// Add tooltip for cave exits
 		} else if (tile == Tile.TILE_CAVE_EXIT) {
-			tooltip.addText(tile.getDesc());
+			list.add(tile.getDesc());
 			
 		}
+		
+		return list;
 	}
 	
 	protected short getHeight(Coordinate pos) {
@@ -66,8 +67,8 @@ public abstract class AbstractCaveRenderer extends MapRenderer<CaveDataBuffer> {
 	}
 	
 	@Override
-	protected Color tileColor(LiveMap map, Tile tile, Coordinate pos) {
-		return map.tileColor(tile, pos, CaveColors::getColorFor );
+	protected Color terrainColor(LiveMap map, Tile tile, Coordinate pos) {
+		return map.terrainColor(tile, pos, CaveColors::getColorFor );
 	}
 	
 	@Override

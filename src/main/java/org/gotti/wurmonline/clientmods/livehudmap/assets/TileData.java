@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Stream;
 
+@Deprecated
 public class TileData {
     private boolean dirty = true;
     private final Coordinate pos;

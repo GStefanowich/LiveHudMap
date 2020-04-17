@@ -1,12 +1,12 @@
 package com.wurmonline.client.renderer.gui;
 
-import java.awt.image.BufferedImage;
-import java.io.IOException;
-import java.net.URL;
-import java.util.Locale;
-
-import javax.imageio.ImageIO;
-
+import com.wurmonline.client.game.World;
+import com.wurmonline.client.options.Options;
+import com.wurmonline.client.renderer.PickData;
+import com.wurmonline.client.resources.textures.ImageTexture;
+import com.wurmonline.client.resources.textures.ImageTextureLoader;
+import com.wurmonline.client.resources.textures.ResourceTexture;
+import com.wurmonline.client.resources.textures.ResourceTextureLoader;
 import com.wurmonline.client.util.Computer;
 import org.gotti.wurmonline.clientmods.livehudmap.LiveHudMapMod;
 import org.gotti.wurmonline.clientmods.livehudmap.LiveMap;
@@ -18,13 +18,11 @@ import org.gotti.wurmonline.clientmods.livehudmap.assets.SklotopolisServer;
 import org.gotti.wurmonline.clientmods.livehudmap.renderer.RenderType;
 import org.gotti.wurmunlimited.modloader.classhooks.HookManager;
 
-import com.wurmonline.client.game.World;
-import com.wurmonline.client.options.Options;
-import com.wurmonline.client.renderer.PickData;
-import com.wurmonline.client.resources.textures.ImageTexture;
-import com.wurmonline.client.resources.textures.ImageTextureLoader;
-import com.wurmonline.client.resources.textures.ResourceTexture;
-import com.wurmonline.client.resources.textures.ResourceTextureLoader;
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.IOException;
+import java.net.URL;
+import java.util.Locale;
 
 public class LiveMapWindow extends WWindow {
 	private final WurmBorderPanel mainPanel;
@@ -70,9 +68,9 @@ public class LiveMapWindow extends WWindow {
 		buttons.addComponent(this.createButton("/", "Center on Player", 3, button -> this.liveMap.setCenter( null )));
 		
 		// Add the sidebar buttons for changing the map view
-		/*buttons.addComponent(createButton("Flat", "Flat view" , 4, (SimpleButtonListener) p0 -> this.liveMap.setRenderer(MapLayer.SURFACE, RenderType.FLAT)));
-		buttons.addComponent(createButton("3D", "Pseudo 3D view" , 5, (SimpleButtonListener) p0 -> this.liveMap.setRenderer(MapLayer.SURFACE, RenderType.ISOMETRIC)));
-		buttons.addComponent(createButton("Topo", "Topographic view" , 6, (SimpleButtonListener) p0 -> this.liveMap.setRenderer(MapLayer.SURFACE, RenderType.TOPOGRAPHIC)));*/
+		/*buttons.addComponent(this.createButton("Flat", "Flat view" , 4, button -> this.liveMap.setRenderer(MapLayer.SURFACE, RenderType.FLAT)));
+		buttons.addComponent(this.createButton("3D", "Pseudo 3D view" , 5, button -> this.liveMap.setRenderer(MapLayer.SURFACE, RenderType.ISOMETRIC)));
+		buttons.addComponent(this.createButton("Topo", "Topographic view" , 6, button -> this.liveMap.setRenderer(MapLayer.SURFACE, RenderType.TOPOGRAPHIC)));*/
 		
 		// Set the map image as the main component
 		this.mainPanel.setComponent((this.liveMapView = new LiveMapView("Live map", this.liveMap, 256, 256)), WurmBorderPanel.CENTER);
@@ -106,11 +104,9 @@ public class LiveMapWindow extends WWindow {
 					url = new URL(path);
 				}
 			}
-			if (url != null) {
+			if (url != null)
 				return ImageIO.read(url);
-			} else {
-				return null;
-			}
+			return null;
 		} catch (IOException e) {
 			LiveHudMapMod.log(e);
 			return null;

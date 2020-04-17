@@ -1,19 +1,15 @@
 package org.gotti.wurmonline.clientmods.livehudmap;
 
-import java.awt.image.BufferedImage;
-import java.util.Collection;
-import java.util.HashMap;
-
-import org.gotti.wurmonline.clientmods.livehudmap.assets.AbstractTileData;
-import org.gotti.wurmonline.clientmods.livehudmap.assets.Coordinate;
-import org.gotti.wurmonline.clientmods.livehudmap.assets.TileData;
-import org.gotti.wurmonline.clientmods.livehudmap.assets.TileEntityData;
-import org.gotti.wurmonline.clientmods.livehudmap.renderer.MapRenderer;
-import org.gotti.wurmonline.clientmods.livehudmap.renderer.RenderType;
-
 import com.wurmonline.client.game.World;
 import com.wurmonline.client.renderer.PickData;
 import com.wurmonline.math.FastMath;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.Coordinate;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.TileData;
+import org.gotti.wurmonline.clientmods.livehudmap.renderer.MapRenderer;
+import org.gotti.wurmonline.clientmods.livehudmap.renderer.RenderType;
+
+import java.awt.image.BufferedImage;
+import java.util.HashMap;
 
 public final class MapLayerView {
 	private final HashMap<Coordinate, TileData> structureLayer = new HashMap<>();
@@ -84,7 +80,7 @@ public final class MapLayerView {
 		);
 	}
 	
-	public void clearEntities() {
+	/*public void clearEntities() {
 		this.entityLayer.clear();
 	}
 	public TileData getStructureLayer(Coordinate pos) {
@@ -104,9 +100,9 @@ public final class MapLayerView {
 	}
 	private TileData setStructureLayer(Coordinate pos, TileData tile) {
 		return this.structureLayer.put( pos, tile );
-	}
+	}*/
 	
-	public TileData getEntityLayer(Coordinate pos) {
+	/*public TileData getEntityLayer(Coordinate pos) {
 		boolean contains;
 		
 		TileData tile = this.entityLayer.get( pos );
@@ -123,22 +119,13 @@ public final class MapLayerView {
 	}
 	private TileData setEntityLayer(Coordinate pos, TileData tile) {
 		return this.entityLayer.put(pos, tile);
-	}
+	}*/
 	
-	public boolean addToTile(Coordinate pos, AbstractTileData data) {
-		if (data instanceof TileEntityData) return this.getEntityLayer(pos).add( data );
-		return this.getStructureLayer(pos).add( data );
-	}
-	public void addToTile(Collection<Coordinate> positions, AbstractTileData data) {
-		for (Coordinate pos : positions)
-			this.addToTile(pos, data);
-	}
-	
-	public boolean tick() {
+	/*public boolean tick() {
 		if ((--this.updateTimer) <= 0 ) {
 			this.updateTimer = LiveMap.REFRESH_RATE;
 			return true;
 		}
 		return false;
-	}
+	}*/
 }

@@ -26,72 +26,141 @@
 package org.gotti.wurmonline.clientmods.livehudmap.renderer;
 
 import com.google.common.util.concurrent.SettableFuture;
+import org.apache.commons.codec.Charsets;
 import org.gotti.wurmonline.clientmods.livehudmap.LiveHudMapMod;
 import org.gotti.wurmonline.clientmods.livehudmap.LiveMap;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.Coordinate;
-import org.gotti.wurmonline.clientmods.livehudmap.assets.LiveMapConfig;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.Region;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.Sync;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.TileRenderLayer;
+import org.json.JSONArray;
+import org.json.JSONObject;
 
 import javax.imageio.ImageIO;
+import java.awt.Color;
+import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
-import java.io.File;
+import java.awt.image.ColorModel;
+import java.awt.image.WritableRaster;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 
 public final class MapTile {
-    private final BufferedImage image;
+    private BufferedImage displayImage = null; // The image shown on the screen
+    private final BufferedImage terrainImage; // The image of the terrain
+    //private final BufferedImage entityImage;
     private final Region area;
-    private final float[] pixels;
     
-    private boolean dirty = false;
+    private final float[] terrainLayer;
+    private final float[] entityLayer;
     
-    private MapTile(Region area, BufferedImage image) {
+    private final Map<Long, List<String>> toolTipData;
+    
+    private boolean genericDirty = false;
+    private boolean terrainDirty = false;
+    
+    private MapTile(Region area, BufferedImage image, JSONObject data) {
         this.area = area;
-        this.image = image;
-        this.pixels = image.getData().getPixels(
+        // The image displayed on the screen should be a CLONE so that the terrain layer is not modified
+        this.displayImage = MapTile.clone(image);
+        this.terrainImage = image;
+        //this.entityImage  = this.empty(TileRenderLayer.ENTITY);
+        
+        int dim = this.getWidth() * this.getHeight();
+        this.terrainLayer = image.getData().getPixels(
             // Read from the image start to finish
             0, 0,
             this.area.getWidth(),
             this.area.getHeight(),
             // Create the standard float array
-            new float[this.area.getWidth() * this.area.getHeight() * 3]
+            new float[dim * TileRenderLayer.TERRAIN.numValues()]
         );
+        this.entityLayer  = new float[dim * TileRenderLayer.ENTITY.numValues()];
+        
+        this.toolTipData = MapTile.datifyJSON(data);
     }
     private MapTile(Region area) {
         this.area = area;
-        this.image = new BufferedImage(this.area.getWidth(), this.area.getHeight(), BufferedImage.TYPE_INT_RGB);
-        this.pixels = new float[this.area.getWidth() * this.area.getHeight() * 3];
+        this.displayImage = this.empty(TileRenderLayer.TERRAIN);
+        this.terrainImage = this.empty(TileRenderLayer.TERRAIN);
+        //this.entityImage  = this.empty(TileRenderLayer.ENTITY);
+        
+        int dim = this.getWidth() * this.getHeight();
+        this.terrainLayer = new float[dim * TileRenderLayer.TERRAIN.numValues()];
+        this.entityLayer  = new float[dim * TileRenderLayer.ENTITY.numValues()];
+        
+        this.toolTipData = new HashMap<>();
     }
     
-    public void setAt(Coordinate pos, final float r, final float g, final float b) {
-        this.setInner(pos.getTileX(), pos.getTileY(), r, g, b);
+    public void setAt(TileRenderLayer renderLayer, Coordinate pos, final float r, final float g, final float b) {
+        this.setAt(renderLayer,pos, r,g,b,255);
     }
-    private void setInner(int x, int y, final float r, final float g, final float b) {
-        int pixelPos = (x + y * this.area.getWidth()) * 3;
+    public void setAt(TileRenderLayer renderLayer, Coordinate pos, final float r, final float g, final float b, final float a) {
+        this.setAt(renderLayer,pos, new Color(r / 255,g / 255,b / 255,a / 255));
+    }
+    public void setAt(TileRenderLayer renderLayer, Coordinate pos, Color color) {
+        this.setInner(renderLayer,pos.getTileX(), pos.getTileY(), color);
+    }
+    private void setInner(TileRenderLayer renderLayer, int x, int y, final Color color) {
+        int pixelPos = ((x + y * this.area.getWidth()) * renderLayer.numValues()) - 1;
+        
+        // Get the pixel array 
+        final float[] layer = renderLayer == TileRenderLayer.TERRAIN ?
+            this.terrainLayer : this.entityLayer;
+        boolean updated = false;
+        
+        // Update ALPHA value
+        if (renderLayer.getImageType() == BufferedImage.TYPE_INT_ARGB) {
+            if (layer[++pixelPos] != color.getAlpha()) {
+                layer[pixelPos] = color.getAlpha();
+                updated = true;
+            }
+        }
         
         // Update RED value
-        if (this.pixels[pixelPos] != r) {
-            this.pixels[pixelPos] = r;
-            this.markDirty();
+        if (layer[++pixelPos] != color.getRed()) {
+            layer[pixelPos] = color.getRed();
+            updated = true;
         }
         
         // Update GREEN value
-        if (this.pixels[++pixelPos] != g) {
-            this.pixels[pixelPos] = g;
-            this.markDirty();
+        if (layer[++pixelPos] != color.getGreen()) {
+            layer[pixelPos] = color.getGreen();
+            updated = true;
         }
         
         // Update BLUE value
-        if (this.pixels[++pixelPos] != b) {
-            this.pixels[pixelPos] = b;
-            this.markDirty();
+        if (layer[++pixelPos] != color.getBlue()) {
+            layer[pixelPos] = color.getBlue();
+            updated = true;
         }
+        
+        // Mark the map for re-render/re-save
+        if (updated) {
+            if (renderLayer == TileRenderLayer.TERRAIN)
+                this.markTerrainDirty();
+            else this.markDirty();
+        }
+    }
+    
+    public void setData(Coordinate pos, List<String> data) {
+        if (!data.isEmpty()) // Save the data if the data is not empty
+            this.toolTipData.put(pos.tilePos().toLong(), data);
+    }
+    public List<String> getData(Coordinate pos) {
+        return this.toolTipData.getOrDefault(pos.tilePos().toLong(), Collections.emptyList());
     }
     
     private Coordinate getBase() {
@@ -102,40 +171,104 @@ public final class MapTile {
     }
     
     private void markDirty() {
-        this.dirty = true;
+        this.genericDirty = true;
+    }
+    private void markTerrainDirty() {
+        this.markDirty();
+        this.terrainDirty = true;
+    }
+    
+    public BufferedImage empty(TileRenderLayer layer) {
+        return new BufferedImage(this.getWidth(), this.getHeight(), layer.getImageType());
     }
     
     public BufferedImage write() {
-        this.image.getRaster().setPixels(0, 0, this.area.getWidth(), this.area.getHeight(), this.pixels);
-        return this.image;
+        // Update the terrain layer
+        if (this.terrainDirty) {
+            WritableRaster terrainWriter = this.terrainImage.getRaster();
+            
+            // Write the Terrain data
+            terrainWriter.setPixels(0, 0, this.getWidth(), this.getHeight(), this.terrainLayer);
+        }
+        // Update the Entity Layer
+        if (this.genericDirty || this.displayImage == null) {
+            this.displayImage = new BufferedImage(this.getWidth(), this.getHeight(), BufferedImage.TYPE_INT_ARGB);
+            
+            // Get the graphics handler of the Display Image
+            Graphics graphics = this.displayImage.getGraphics();
+            
+            // Draw the layers to the Display Image
+            graphics.drawImage(this.terrainImage,0,0,null);
+            
+            // TODO: Draw the Entity layer over the terrain layer
+            
+            /*// Get the Raster Writer
+            WritableRaster displayWriter = this.displayImage.getRaster();
+            
+            // Write the Terrain data
+            displayWriter.setPixels(0, 0, this.getWidth(), this.getHeight(), this.entityLayer);*/
+            
+            this.genericDirty = false;
+        }
+        return this.displayImage;
     }
-    public boolean save(Path folder, String name) throws IOException {
+    
+    public boolean save(final Path folder, final String name) throws IOException {
         boolean success = false;
-        if (this.dirty) {
-            // Create the folder if it does not exist
-            if (!Files.exists(folder))
-                Files.createDirectories(folder);
-            
-            // Create the File path
-            File location = Paths.get(folder.toString(), name + ".png").toFile();
-            
-            // Log that we're writing
-            LiveHudMapMod.log("Writing to " + location.toString());
-            
-            // Save the image
-            success = ImageIO.write(this.image, "png", location);
-            
+        if (this.terrainDirty) {
+            // Only save if the tile is within the map range (Don't save the map border)
+            if (LiveMap.isWithinMap(this.getBase())) {
+                // Create the folder if it does not exist
+                if (!Files.exists(folder))
+                    Files.createDirectories(folder);
+    
+                // Log that we're writing
+                LiveHudMapMod.log("Writing map tile " + this.toString());
+    
+                // Save the image
+                success = ImageIO.write(this.terrainImage, "png", Paths.get(folder.toString(), name + ".png").toFile());
+    
+                // Save the JSON data
+                JSONObject json = MapTile.JSONifyData(this.toolTipData);
+                if (!json.isEmpty())
+                    Files.write(Paths.get(folder.toString(), name + ".json"), Collections.singleton(json.toString()), Charsets.UTF_8);
+            }
             // The MapTile is no longer "dirty" (Doesn't need to be saved again)
-            this.dirty = false;
+            this.terrainDirty = false;
         }
         return success;
+    }
+    
+    public int getWidth() {
+        return this.getArea().getWidth();
+    }
+    public int getHeight() {
+        return this.getArea().getHeight();
+    }
+    
+    @Override
+    public String toString() {
+        return this.getArea().toString();
+    }
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj)
+            return true;
+        if (!(obj instanceof MapTile))
+            return false;
+        MapTile tile = (MapTile)obj;
+        return Objects.equals(tile.getBase(), this.getBase()) && Objects.equals(tile.getArea(), this.getArea());
+    }
+    @Override
+    public int hashCode() {
+        return Objects.hash( this.getBase(), this.getArea() );
     }
     
     public static MapTile empty(Region region) {
         return new MapTile(region);
     }
-    public static MapTile from(Region region, BufferedImage image) {
-        return new MapTile(region, image);
+    public static MapTile from(Region region, BufferedImage image, JSONObject data) {
+        return new MapTile(region, image, data);
     }
     public static BufferedImage join(int imageDimension, Collection<MapTile> tiles) {
         BufferedImage image = new BufferedImage(imageDimension, imageDimension, BufferedImage.TYPE_INT_RGB);
@@ -170,22 +303,11 @@ public final class MapTile {
         return image;
     }
     
-    @Override
-    public String toString() {
-        return this.getArea().toString();
-    }
-    @Override
-    public boolean equals(Object obj) {
-        if (this == obj)
-            return true;
-        if (!(obj instanceof MapTile))
-            return false;
-        MapTile tile = (MapTile)obj;
-        return Objects.equals(tile.getBase(), this.getBase()) && Objects.equals(tile.getArea(), this.getArea());
-    }
-    @Override
-    public int hashCode() {
-        return Objects.hash( this.getBase(), this.getArea() );
+    public static BufferedImage clone(BufferedImage image) {
+        ColorModel model = image.getColorModel();
+        boolean preMulti = model.isAlphaPremultiplied();
+        WritableRaster raster = image.copyData(null);
+        return new BufferedImage(model, raster, preMulti, null);
     }
     
     /**
@@ -196,7 +318,7 @@ public final class MapTile {
      */
     public static void saveToDisk(final Region region, final RenderType renderType, final SettableFuture<MapTile> future) {
         // Execute the save on a separate thread
-        LiveMap.threadExecute(() -> {
+        LiveMap.threadExecute(() -> Sync.run(region.toString(), () -> {
             // Create the path to save to
             Path folder = Paths.get(
                 LiveHudMapMod.MOD_FOLDER.toString(),
@@ -205,7 +327,6 @@ public final class MapTile {
             );
             
             try {
-                
                 // If finished and not cancelled, Cancel the future
                 if (!(future.isDone() || future.isCancelled()))
                     future.cancel(false);
@@ -217,6 +338,43 @@ public final class MapTile {
             } catch (InterruptedException | ExecutionException | IOException e) {
                 LiveHudMapMod.log(e);
             }
-        });
+        }));
+    }
+    
+    private static JSONObject JSONifyData(Map<Long, List<String>> map) {
+        JSONObject json = new JSONObject();
+        
+        // Iterate the map
+        for (Map.Entry<Long, List<String>> entry : map.entrySet()) {
+            json.put(
+                // Convert the Coordinate Key to a String
+                entry.getKey().toString(),
+                // Convert the list of Tooltips to a String
+                new JSONArray(entry.getValue())
+            );
+        }
+        
+        return json;
+    }
+    private static Map<Long, List<String>> datifyJSON(JSONObject json) {
+        Map<Long, List<String>> map = new HashMap<>();
+        
+        // Iterate the JSON Object
+        Iterator<String> iterator = json.keys();
+        while (iterator.hasNext()) {
+            String key = iterator.next();
+            
+            map.put(
+                // Convert the String Key to a Coordinate
+                Long.parseLong(key),
+                // Convert the List of Objects to a List of Strings
+                json.getJSONArray(key).toList()
+                    .stream()
+                    .map(Object::toString)
+                    .collect(Collectors.toList())
+            );
+        }
+        
+        return map;
     }
 }

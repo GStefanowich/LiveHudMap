@@ -39,7 +39,7 @@ import com.wurmonline.shared.constants.StructureConstants.FloorMaterial;
 import java.lang.reflect.Field;
 import java.util.List;
 
-public class Structures {
+public final class Structures {
     private Structures() {}
     
     private static final Field BRIDGE = Reflection.getField(BridgePartData.class, "bridge");

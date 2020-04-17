@@ -1,17 +1,18 @@
 package org.gotti.wurmonline.clientmods.livehudmap.renderer;
 
-import java.awt.Color;
-import java.awt.image.BufferedImage;
-import java.util.HashSet;
-import java.util.Optional;
-import java.util.Set;
-
 import com.wurmonline.client.game.NearTerrainDataBuffer;
 import com.wurmonline.client.renderer.cell.CellRenderer;
 import com.wurmonline.mesh.Tiles.Tile;
 import org.gotti.wurmonline.clientmods.livehudmap.LiveMap;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.AbstractTileData;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.Coordinate;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.TileRenderLayer;
+
+import java.awt.Color;
+import java.awt.image.BufferedImage;
+import java.util.HashSet;
+import java.util.Optional;
+import java.util.Set;
 
 public class MapRendererIsometric extends AbstractSurfaceRenderer {
 	
@@ -43,7 +44,7 @@ public class MapRendererIsometric extends AbstractSurfaceRenderer {
                     if (this.canDrawAt(pos)) {
                         // Get the entities on the tile
                         Optional<? extends AbstractTileData> tileData = this.getHigherTile(
-                            map.getEntitiesAt(pos),
+                            this.getEntitiesAt(pos,height),
                             this.getStructuresAt(pos, height)
                         );
                         
@@ -63,7 +64,7 @@ public class MapRendererIsometric extends AbstractSurfaceRenderer {
                         float b = h;
                         
                         // Get the color the tile should be
-                        final Color color = (tileData.isPresent() ? tileData.get().getColor() : super.tileColor(map, tile, pos));
+                        final Color color = (tileData.isPresent() ? tileData.get().getColor() : super.terrainColor(map, tile, pos));
                         
                         // Adjust the color to the "normal" color
                         r *= (color.getRed() / 255.0f) * 2;
@@ -87,7 +88,7 @@ public class MapRendererIsometric extends AbstractSurfaceRenderer {
                         final int altTarget = y - (int) (getSurfaceHeight(pos) * MapRenderer.MAP_HEIGHT / 4 / (Short.MAX_VALUE / 2.5f));
                         while (height > altTarget && height >= 0) {
                             if (height < imageY) // Set the color for the tile
-                                grid.setAt(pos, r * 255, g * 255, b * 255);
+                                grid.setAt(TileRenderLayer.TERRAIN,pos, r * 255, g * 255, b * 255);
                             height--;
                         }
                     }

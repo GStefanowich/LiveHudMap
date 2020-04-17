@@ -1,17 +1,19 @@
 package org.gotti.wurmonline.clientmods.livehudmap.renderer;
 
-import java.awt.Color;
-import java.awt.image.BufferedImage;
-import java.util.HashSet;
-import java.util.Optional;
-import java.util.Set;
-
 import com.wurmonline.client.game.NearTerrainDataBuffer;
 import com.wurmonline.client.renderer.cell.CellRenderer;
 import com.wurmonline.mesh.Tiles.Tile;
 import org.gotti.wurmonline.clientmods.livehudmap.LiveMap;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.AbstractTileData;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.Coordinate;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.TileRenderLayer;
+
+import java.awt.Color;
+import java.awt.image.BufferedImage;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Optional;
+import java.util.Set;
 
 public class MapRendererFlat extends AbstractSurfaceRenderer {
 	public MapRendererFlat(CellRenderer renderer, NearTerrainDataBuffer buffer) {
@@ -39,7 +41,7 @@ public class MapRendererFlat extends AbstractSurfaceRenderer {
 					if (this.canDrawAt(pos)) {
 						// Get the entities on the tile
 						Optional<AbstractTileData> tileData = this.getHigherTile(
-							map.getEntitiesAt(pos),
+							this.getEntitiesAt(pos, playerPos.getZ()),
 							this.getStructuresAt(pos, playerPos.getZ())
 						);
 						
@@ -50,7 +52,7 @@ public class MapRendererFlat extends AbstractSurfaceRenderer {
 						final Tile tile = this.getEffectiveTileType(pos);
 						
 						// Create the color for the tile
-						final Color color = (tileData.isPresent() ? tileData.get().getColor() : super.tileColor(map, tile, pos));
+						final Color color = (tileData.isPresent() ? tileData.get().getColor() : super.terrainColor(map, tile, pos));
 						
 						// Get the RGB of the color
 						int r = color.getRed(),
@@ -65,8 +67,12 @@ public class MapRendererFlat extends AbstractSurfaceRenderer {
 						}
 						
 						// Set the color for the tile
-						grid.setAt(pos, r, g, b);
+						grid.setAt(TileRenderLayer.TERRAIN,pos, r, g, b);
+						grid.setData(pos, this.positionData(new ArrayList<>(), map, pos));
 					}
+					
+					Optional<Color> deedColor = this.getDeedColorAt(pos);
+					if (deedColor.isPresent()) grid.setAt(TileRenderLayer.ENTITY,pos, deedColor.get());
 				}
 			}
 		}

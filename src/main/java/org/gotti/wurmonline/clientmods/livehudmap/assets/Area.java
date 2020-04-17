@@ -63,15 +63,23 @@ public final class Area {
     public Coordinate snap(Coordinate old) {
         if (this.isWithin( old ))
             return old;
-        else if (old.isNegative()) {
+        else {
+            int x = old.getX();
+            int y = old.getY();
+            
+            // Snap X
+            if (x < 0)
+                x = Math.max(northWest.getX(), x);
+            else x = Math.min(southEast.getX(), x);
+            
+            // Snap Y
+            if (y < 0)
+                y = Math.max(northWest.getY(), old.getY());
+            else y = Math.min(southEast.getY(), old.getY());
+            
             return Coordinate.of(
-                Math.max(northWest.getX(), old.getX()),
-                Math.max(northWest.getY(), old.getY())
-            );
-        } else {
-            return Coordinate.of(
-                Math.min(southEast.getX(), old.getX()),
-                Math.min(southEast.getX(), old.getY())
+                x,
+                y
             );
         }
     }
@@ -83,7 +91,7 @@ public final class Area {
         int lowerX = Math.min( this.northWest.getX(), this.southEast.getX() );
         int lowerY = Math.min( this.northWest.getY(), this.southEast.getY() );
         
-        return  ( c.getX() >= lowerX ) && ( c.getY() >= lowerY ) && ( c.getX() <= upperX ) && ( c.getY() <= upperY );
+        return ( c.getX() >= lowerX ) && ( c.getY() >= lowerY ) && ( c.getX() < upperX ) && ( c.getY() < upperY );
     }
     public boolean isBorder(Coordinate c) {
         return this.northWest.sameX(c)

@@ -40,7 +40,6 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class SklotopolisServer extends Server {
     
-    
     private final Map<Coordinate, TileDeedData> deedBorders;
     private final Map<Coordinate, SklotopolisDeed> serverDeeds;
     
@@ -87,7 +86,7 @@ public class SklotopolisServer extends Server {
                     this.addDeed(new SklotopolisDeed(list.getJSONObject( i )));
                 }
                 
-                LiveHudMapMod.log("Updated " + this.serverDeeds.size() + " deeds for " + this.getName());
+                LiveHudMapMod.log("Updated " + list.length() + " deeds for " + this.getName());
             } catch (IOException | JSONException e) {
                 LiveHudMapMod.log(e);
             }

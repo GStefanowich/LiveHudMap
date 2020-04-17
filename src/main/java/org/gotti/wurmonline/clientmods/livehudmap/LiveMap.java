@@ -1,46 +1,8 @@
 package org.gotti.wurmonline.clientmods.livehudmap;
 
-import java.awt.Color;
-import java.awt.Graphics2D;
-import java.awt.RenderingHints;
-import java.awt.image.BufferedImage;
-import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.concurrent.Callable;
-import java.util.concurrent.Executors;
-import java.util.function.Function;
-
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.wurmonline.client.comm.ServerConnectionListenerClass;
-import com.wurmonline.client.renderer.GroundItemData;
-import com.wurmonline.client.renderer.cell.CreatureCellRenderable;
-import com.wurmonline.client.renderer.cell.GroundItemCellRenderable;
-import com.wurmonline.client.renderer.structures.StructureData;
-import com.wurmonline.mesh.Tiles.Tile;
-import org.gotti.wurmonline.clientmods.livehudmap.assets.Coordinate;
-import org.gotti.wurmonline.clientmods.livehudmap.assets.Direction;
-import org.gotti.wurmonline.clientmods.livehudmap.assets.Area;
-import org.gotti.wurmonline.clientmods.livehudmap.assets.LiveMapConfig;
-import org.gotti.wurmonline.clientmods.livehudmap.assets.Server;
-import org.gotti.wurmonline.clientmods.livehudmap.assets.TileDeedData;
-import org.gotti.wurmonline.clientmods.livehudmap.assets.TileEntityData;
-import org.gotti.wurmonline.clientmods.livehudmap.assets.EntityType;
-import org.gotti.wurmonline.clientmods.livehudmap.assets.Servers;
-import org.gotti.wurmonline.clientmods.livehudmap.assets.SklotopolisServer;
-import org.gotti.wurmonline.clientmods.livehudmap.assets.TileData;
-import org.gotti.wurmonline.clientmods.livehudmap.assets.TilePlayerData;
-import org.gotti.wurmonline.clientmods.livehudmap.reflection.GroundItems;
-import org.gotti.wurmonline.clientmods.livehudmap.renderer.RenderType;
-import org.gotti.wurmonline.clientmods.livehudmap.renderer.TitleDisplay;
-import org.gotti.wurmunlimited.modloader.ReflectionUtil;
-
 import com.wurmonline.client.game.TerrainChangeListener;
 import com.wurmonline.client.game.World;
 import com.wurmonline.client.renderer.PickData;
@@ -51,6 +13,28 @@ import com.wurmonline.client.resources.textures.ImageTexture;
 import com.wurmonline.client.resources.textures.ImageTextureLoader;
 import com.wurmonline.client.resources.textures.PreProcessedTextureData;
 import com.wurmonline.client.resources.textures.TextureLoader;
+import com.wurmonline.mesh.Tiles.Tile;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.Area;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.Coordinate;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.Direction;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.LiveMapConfig;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.Server;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.Servers;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.SklotopolisServer;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.TileEntityData;
+import org.gotti.wurmonline.clientmods.livehudmap.renderer.RenderType;
+import org.gotti.wurmonline.clientmods.livehudmap.renderer.TitleDisplay;
+import org.gotti.wurmunlimited.modloader.ReflectionUtil;
+
+import java.awt.Color;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.image.BufferedImage;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.concurrent.Callable;
+import java.util.concurrent.Executors;
+import java.util.function.Function;
 
 public class LiveMap implements TerrainChangeListener, CaveBufferChangeListener {
 	
@@ -75,9 +59,9 @@ public class LiveMap implements TerrainChangeListener, CaveBufferChangeListener 
 	private int dirtyTimer = 0;
 	private int size;
 	
-	private final Map<Long, GroundItemCellRenderable> ref_GroundItems;
+	/*private final Map<Long, GroundItemCellRenderable> ref_GroundItems;
 	private final Map<Long, CreatureCellRenderable> ref_Creatures;
-	private final Map<Long, StructureData> ref_Structures;
+	private final Map<Long, StructureData> ref_Structures;*/
 	
 	private final World world;
 	
@@ -107,10 +91,10 @@ public class LiveMap implements TerrainChangeListener, CaveBufferChangeListener 
 		
 		this.onUpdate = callable;
 		
-		ServerConnectionListenerClass listener = this.world.getClient()
-			.getConnectionListener();
+		/*ServerConnectionListenerClass listener = this.world.getClient()
+			.getConnectionListener();*/
 		
-		this.ref_Creatures = listener.getCreatures();
+		/*this.ref_Creatures = listener.getCreatures();
 		this.ref_Structures = listener.getStructures();
 		try {
 			
@@ -119,7 +103,7 @@ public class LiveMap implements TerrainChangeListener, CaveBufferChangeListener 
 			
 		} catch (IllegalAccessException | NoSuchFieldException e) {
 			throw new RuntimeException( e );
-		}
+		}*/
 	}
 	
 	// Tick update
@@ -143,8 +127,8 @@ public class LiveMap implements TerrainChangeListener, CaveBufferChangeListener 
 			this.markDirty();
 		
 		// Update the layer
-		if (this.getLayer().tick())
-			this.updateEntities();
+		/*if (this.getLayer().tick())
+			this.updateEntities();*/
 		
 		if ( !this.dirty )
 			this.dirtyTimer--;
@@ -186,7 +170,7 @@ public class LiveMap implements TerrainChangeListener, CaveBufferChangeListener 
 				this.world.getSeasonManager().getSeason(),
 				this.currentMapCenter,
 				this.getLayer().getZoom(),
-				this.world.getWurmTime()
+				this.world.getWurmTime() - this.world.getWurmTimeOffset()
 			));
 		}
 		this.dirty = false;
@@ -397,7 +381,7 @@ public class LiveMap implements TerrainChangeListener, CaveBufferChangeListener 
 	 * Map Data Caching
 	 */
 	public void updateEntities() {
-		// Get the creatures from the world
+		/*// Get the creatures from the world
 		Map<Long, CreatureCellRenderable> creatures = this.getCreatures();
 		Map<Long, GroundItemCellRenderable> groundItems = this.getGroundItems();
 		Map<Long, StructureData> structures = this.getStructures();
@@ -434,7 +418,7 @@ public class LiveMap implements TerrainChangeListener, CaveBufferChangeListener 
 			
 			// Save the entity to the tile
 			layer.addToTile(entityData.getPos(), entityData);
-		}
+		}*/
 		
 		// Iterate structures
 		/*for (Map.Entry<Long, StructureData> list : structures.entrySet()) {
@@ -477,37 +461,14 @@ public class LiveMap implements TerrainChangeListener, CaveBufferChangeListener 
 	/*
 	 * Map Colors
 	 */
-	public final Color tileColor(Tile tile, Coordinate pos, Function<Tile, Color> function) {
-		Server server = Servers.getServer();
-		
-		// Color deed borders
-		if (server instanceof SklotopolisServer && LiveMap.SHOW_DEEDS) {
-			Optional<TileDeedData> deed = ((SklotopolisServer) server).getDeedBorder(pos);
-			if (deed.isPresent())
-				return (this.getRenderer() == RenderType.CAVE ? Color.GRAY : deed.get().getColor());
-		}
-		
+	public final Color terrainColor(Tile tile, Coordinate pos, Function<Tile, Color> function) {
 		Color color = function.apply( tile == null ? Tile.TILE_DIRT : tile );
 		
+		Server server = Servers.getServer();
 		if (server instanceof SklotopolisServer) {
 			// Color highways
 			if (LiveMap.SHOW_ROADS && ((SklotopolisServer) server).isHighway( pos ))
 				return color.brighter();
-			
-			// Get information on the tile
-			/*TileData tileData = this.getLayer().getStructureLayer(pos);
-			if (tileData != null) {
-				AbstractTileType top = tileData.getTopType();
-				if (top == AbstractTileType.BRIDGE) {
-					// Color bridges
-					List<TileStructureData> bridges = tileData.getBridges();
-					if (!bridges.isEmpty())
-						return bridges.get(0).getColor();
-				} else if (top == AbstractTileType.HOUSE) {
-					// Color houses
-					
-				}
-			}*/
 		}
 		
 		return color;
@@ -538,11 +499,11 @@ public class LiveMap implements TerrainChangeListener, CaveBufferChangeListener 
 	/*public final Optional<AbstractTileData> getHighestAt( Coordinate pos ) {
 		return Optional.ofNullable(this.getLayer().getStructureLayer( pos ).getTop());
 	}*/
-	public final List<TileEntityData> getEntitiesAt( Coordinate pos ) {
+	/*public final List<TileEntityData> getEntitiesAt( Coordinate pos ) {
 		List<TileEntityData> list = new ArrayList<>();
 		TileData tile = this.getLayer().getStructureLayer( pos );
 		
-		if (LiveMap.SHOW_SELF && this.currentMapCenter.equals( pos ))
+		if (LiveMap.SHOW_SELF && this.getPlayerPosition().equals( pos ))
 			list.add(new TilePlayerData( this.world.getPlayer() ));
 		if (tile != null) {
 			// Sift out the players from the tile
@@ -561,7 +522,7 @@ public class LiveMap implements TerrainChangeListener, CaveBufferChangeListener 
 		}
 		
 		return list;
-	}
+	}*/
 	/*public final List<TileStructureData> getStructuresAt(Coordinate worldPos) {
 		List<TileStructureData> list = new ArrayList<>();
 		TileData tile = this.getLayer().getStructureLayer( worldPos );
@@ -576,7 +537,7 @@ public class LiveMap implements TerrainChangeListener, CaveBufferChangeListener 
 		
 		return list;
 	}*/
-	private Map<Long, CreatureCellRenderable> getCreatures() {
+	/*private Map<Long, CreatureCellRenderable> getCreatures() {
 		return this.ref_Creatures;
 	}
 	private Map<Long, GroundItemCellRenderable> getGroundItems() {
@@ -584,7 +545,7 @@ public class LiveMap implements TerrainChangeListener, CaveBufferChangeListener 
 	}
 	private Map<Long, StructureData> getStructures() {
 		return this.ref_Structures;
-	}
+	}*/
 	
 	public static Coordinate getMapOffset(Coordinate pos) {
 		return pos.sub(LiveMap.FIRST_MAP_SQUARE);

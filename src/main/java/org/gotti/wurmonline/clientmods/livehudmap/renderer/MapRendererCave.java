@@ -1,17 +1,18 @@
 package org.gotti.wurmonline.clientmods.livehudmap.renderer;
 
-import java.awt.Color;
-import java.awt.image.BufferedImage;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
 import com.wurmonline.client.game.CaveDataBuffer;
 import com.wurmonline.client.renderer.cell.CellRenderer;
 import com.wurmonline.mesh.Tiles.Tile;
 import org.gotti.wurmonline.clientmods.livehudmap.LiveMap;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.Coordinate;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.TileEntityData;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.TileRenderLayer;
+
+import java.awt.Color;
+import java.awt.image.BufferedImage;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 public final class MapRendererCave extends AbstractCaveRenderer {
 	
@@ -39,7 +40,7 @@ public final class MapRendererCave extends AbstractCaveRenderer {
 					// Update if the player is within view
 					if (this.canDrawAt(pos)) {
 						// If the player is on the tile
-						List<TileEntityData> entityAt = map.getEntitiesAt(pos);
+						List<TileEntityData> entityAt = this.getEntitiesAt(pos,playerPos.getZ());
 						
 						// Get the tile height
 						final short height = this.getHeight(pos);
@@ -48,7 +49,7 @@ public final class MapRendererCave extends AbstractCaveRenderer {
 						Tile tile = this.getEffectiveTileType(pos);
 						
 						// Create the color for the tile
-						final Color color = (entityAt.isEmpty() ? super.tileColor(map, tile, pos) : map.entityColor(entityAt.get(0)));
+						final Color color = (entityAt.isEmpty() ? super.terrainColor(map, tile, pos) : map.entityColor(entityAt.get(0)));
 						
 						// Get the RGB of the color
 						int r = color.getRed();
@@ -63,8 +64,10 @@ public final class MapRendererCave extends AbstractCaveRenderer {
 						}
 						
 						// Set the color for the tile
-						grid.setAt(pos, r, g, b);
+						grid.setAt(TileRenderLayer.TERRAIN,pos, r, g, b);
 					}
+					
+					
 				}
 			}
 		}

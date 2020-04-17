@@ -1,7 +1,6 @@
 package org.gotti.wurmonline.clientmods.livehudmap.renderer;
 
 import com.wurmonline.client.game.NearTerrainDataBuffer;
-import com.wurmonline.client.renderer.PickData;
 import com.wurmonline.client.renderer.cell.CellRenderer;
 import com.wurmonline.client.renderer.structures.BridgePartData;
 import com.wurmonline.client.renderer.structures.FenceData;
@@ -35,14 +34,14 @@ public abstract class AbstractSurfaceRenderer extends MapRenderer<NearTerrainDat
 	}
 	
 	@Override
-	protected final void abstractTooltip(LiveMap map, PickData tooltip, Coordinate tilePos, Coordinate player) {
+	protected final List<String> positionData(List<String> list, LiveMap map, Coordinate tilePos) {
 		// Get the tile at the pos
 		final Tile tile = this.getEffectiveTileType(tilePos);
 		//final TileData tileData = MapLayers.SURFACE.getStructureLayer(tilePos);
 		
 		// If the tile is a mine entrance
 		if (tile == Tile.TILE_HOLE || tile.isCaveDoor()) {
-			tooltip.addText("Cave" + ( tile.isCaveDoor() ? " (Door)" : "" ));
+			list.add("Cave" + ( tile.isCaveDoor() ? " (Door)" : "" ));
 			
 		} else {
 			if (tile == Tile.TILE_CLAY
@@ -54,7 +53,7 @@ public abstract class AbstractSurfaceRenderer extends MapRenderer<NearTerrainDat
 				|| tile.isBush()
 				|| tile.isTree()
 				|| tile.isEnchanted() ) {
-				tooltip.addText(tile.getDesc());
+				list.add(tile.getDesc());
 				
 			}
 			
@@ -62,8 +61,8 @@ public abstract class AbstractSurfaceRenderer extends MapRenderer<NearTerrainDat
 			if (this.getSurfaceHeight( tilePos ) < 0) {
 				Optional<BridgePartData> bridges = this.getBridgeAt( tilePos, this.getLayer());
 				if (!bridges.isPresent())
-					tooltip.addText("Water");
-				else tooltip.addText(Structures.getBridge(bridges.get()).getHoverName());
+					list.add("Water");
+				else list.add(Structures.getBridge(bridges.get()).getHoverName());
 			} // If the surface is not submerged, check for structures (Structures cannot be built at the water layer)
 			else {
 				Optional<StructureData> structures = this.getStructureAt(tilePos, this.getLayer());
@@ -72,21 +71,23 @@ public abstract class AbstractSurfaceRenderer extends MapRenderer<NearTerrainDat
 					// Ignore structure if a Fence
 					if (!(structure instanceof FenceData)) {
 						if (structure instanceof HouseRoofData) // If structure at tile is a Roof
-							tooltip.addText(Structures.getHouse((HouseRoofData) structure).getHoverName());
+							list.add(Structures.getHouse((HouseRoofData) structure).getHoverName());
 						else if (structure instanceof HouseFloorData) // If structure at tile is a Floor
-							tooltip.addText(Structures.getHouse((HouseFloorData) structure).getHoverName());
+							list.add(Structures.getHouse((HouseFloorData) structure).getHoverName());
 						else if (structure instanceof BridgePartData) // If structure at tile is a Bridge
-							tooltip.addText(Structures.getBridge((BridgePartData) structure).getHoverName());
-						else tooltip.addText(structure.getHoverName());
+							list.add(Structures.getBridge((BridgePartData) structure).getHoverName());
+						else list.add(structure.getHoverName());
 					}
 				}
 			}
 		}
+		
+		return list;
 	}
 	
 	@Override
-	protected Color tileColor(LiveMap map, Tile tile, Coordinate pos) {
-		return map.tileColor(tile, pos, TileColors::getColorFor );
+	protected Color terrainColor(LiveMap map, Tile tile, Coordinate pos) {
+		return map.terrainColor(tile, pos, TileColors::getColorFor );
 	}
 	
 	@Override

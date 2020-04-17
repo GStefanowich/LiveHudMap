@@ -37,18 +37,21 @@ import java.util.List;
 
 public class TileEntityData extends AbstractTileData<List<Coordinate>> {
     
+    private final long id;
     private final String name;
     private final List<Coordinate> pos;
     private final float layer;
     private final EntityType type;
     
     public TileEntityData(EntityType type, CreatureCellRenderable creature) {
+        this.id    = creature.getId();
         this.name  = (creature instanceof PlayerCellRenderable ? creature.getCreatureData().getName() : creature.getHoverName());
         this.pos   = TileEntityData.sizeUp(creature);
         this.layer = creature.getHPos();
         this.type  = type;
     }
     public TileEntityData(EntityType type, GroundItemData groundItem) {
+        this.id   = groundItem.getId();
         this.name = groundItem.getName();
         this.pos  = Collections.singletonList(Coordinate.of(
             groundItem.getX() / 4,
@@ -58,6 +61,7 @@ public class TileEntityData extends AbstractTileData<List<Coordinate>> {
         this.type  = type;
     }
     public TileEntityData(PlayerObj player) {
+        this.id    = 0L;
         this.name  = player.getPlayerName();
         this.pos   = Collections.singletonList(Coordinate.of( player.getPos() ));
         this.layer = player.getPos().getH();

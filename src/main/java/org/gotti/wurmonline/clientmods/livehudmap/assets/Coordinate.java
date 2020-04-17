@@ -26,7 +26,6 @@
 package org.gotti.wurmonline.clientmods.livehudmap.assets;
 
 import com.wurmonline.client.game.PlayerPosition;
-import org.gotti.wurmonline.clientmods.livehudmap.LiveMap;
 
 import java.util.Objects;
 
@@ -94,6 +93,16 @@ public final class Coordinate {
     public int getTileY() {
         int tileY = this.getY() % LiveMapConfig.MAP_TILE_SIZE;
         return (tileY < 0 ? LiveMapConfig.MAP_TILE_SIZE + tileY : tileY);
+    }
+    
+    /**
+     * @return The position within the Tile (64x64)
+     */
+    public Coordinate tilePos() {
+        return Coordinate.of(
+            this.getTileX(),
+            this.getTileY()
+        );
     }
     
     /**
@@ -210,6 +219,13 @@ public final class Coordinate {
     }
     public static Coordinate max() { return Coordinate.MAX; }
     
+    public static Coordinate of(long val) {
+        return Coordinate.of(
+            val >> 16,
+            val & 0xffff
+        );
+    }
+    
     public static Coordinate of(int x, int y) {
         return new Coordinate(x, y, 0);
     }
@@ -223,6 +239,19 @@ public final class Coordinate {
         return Coordinate.of(pos.getTileX(), pos.getTileY(), pos.getLayer());
     }
     
+    public static Coordinate parse(String dimensions) {
+        return Coordinate.parse(dimensions,"x");
+    }
+    public static Coordinate parse(String dimensions, String separator) {
+        return Coordinate.parse(dimensions.split(separator, 2));
+    }
+    public static Coordinate parse(String[] dimensions) {
+        return Coordinate.of(
+            Integer.parseInt(dimensions[0]),
+            Integer.parseInt(dimensions[1])
+        );
+    }
+    
     public static int horizontalDiff(Coordinate start, Coordinate end) {
         return Direction.EAST.getDistance(start) - Direction.EAST.getDistance(end);
     }
@@ -233,6 +262,9 @@ public final class Coordinate {
     @Override
     public String toString() {
         return this.getX() + "x" + this.getY();
+    }
+    public long toLong() {
+        return (this.getX() << 16) | this.getY();
     }
     @Override
     public boolean equals(Object obj) {

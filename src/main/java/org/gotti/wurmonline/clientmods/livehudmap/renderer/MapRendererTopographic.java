@@ -1,12 +1,5 @@
 package org.gotti.wurmonline.clientmods.livehudmap.renderer;
 
-import java.awt.Color;
-import java.awt.image.BufferedImage;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
-import java.util.Set;
-
 import com.wurmonline.client.game.NearTerrainDataBuffer;
 import com.wurmonline.client.renderer.cell.CellRenderer;
 import com.wurmonline.mesh.Tiles.Tile;
@@ -15,6 +8,14 @@ import org.gotti.wurmonline.clientmods.livehudmap.assets.AbstractTileData;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.Coordinate;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.Direction;
 import org.gotti.wurmonline.clientmods.livehudmap.assets.TileEntityData;
+import org.gotti.wurmonline.clientmods.livehudmap.assets.TileRenderLayer;
+
+import java.awt.Color;
+import java.awt.image.BufferedImage;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 public class MapRendererTopographic extends AbstractSurfaceRenderer {
 	private short interval;
@@ -45,18 +46,18 @@ public class MapRendererTopographic extends AbstractSurfaceRenderer {
 					if (this.canDrawAt(pos)) {
 						// Get the entities on the tile
 						Optional<? extends AbstractTileData> tileData = this.getHigherTile(
-							map.getEntitiesAt(pos),
+							this.getEntitiesAt(pos,playerPos.getZ()),
 							this.getStructuresAt(pos, playerPos.getZ())
 						);
 						
 						// Get the tile height
-						final short height = getSurfaceHeight(pos);
+						final short height = this.getSurfaceHeight(pos);
 						
 						// Get the tile type
 						final Tile tile = this.getEffectiveTileType(pos);
 						
 						// Create the color for the tile
-						final Color color = (tileData.isPresent() ? tileData.get().getColor() : super.tileColor(map, tile, pos));
+						final Color color = (tileData.isPresent() ? tileData.get().getColor() : super.terrainColor(map, tile, pos));
 						
 						// Get the RGB of the color
 						int r = color.getRed();
@@ -74,7 +75,7 @@ public class MapRendererTopographic extends AbstractSurfaceRenderer {
 								|| this.checkContourLine(height, nearHeightNY, this.interval)
 								|| this.checkContourLine(height, nearHeightX, this.interval)
 								|| this.checkContourLine(height, nearHeightY, this.interval)
-								|| this.isLargeAdjacent(map, pos);
+								|| this.isLargeAdjacent( pos,playerPos.getZ());
 							
 							if (isContour) {
 								r = 0;
@@ -88,7 +89,7 @@ public class MapRendererTopographic extends AbstractSurfaceRenderer {
 						}
 						
 						// Set the color for the tile
-						grid.setAt(pos, r, g, b);
+						grid.setAt(TileRenderLayer.TERRAIN,pos, r, g, b);
 					}
 				}
 			}
@@ -98,9 +99,9 @@ public class MapRendererTopographic extends AbstractSurfaceRenderer {
 		return MapTile.join(imageDimension, grids);
 	}
 	
-	private boolean isLargeAdjacent( LiveMap map, Coordinate center ) {
+	private boolean isLargeAdjacent(Coordinate center,int height) {
 		for (Direction direction : Direction.values()) {
-			List<TileEntityData> tile = map.getEntitiesAt( center.offset( direction ));
+			List<TileEntityData> tile = this.getEntitiesAt( center.offset( direction ),height);
 			for (TileEntityData entity : tile) {
 				if (entity.getPos().size() > 1)
 					return true;
